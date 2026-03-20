@@ -15,7 +15,8 @@ clock = pygame.time.Clock()
 x = 400
 y = 300
 
-speed = 5   # 이동 속도
+radius = 50
+speed = 5
 
 running = True
 
@@ -24,7 +25,6 @@ while running:
         if event.type == pygame.QUIT:
             running = False
 
-    # 키 입력 확인
     keys = pygame.key.get_pressed()
 
     if keys[pygame.K_w]:
@@ -36,8 +36,18 @@ while running:
     if keys[pygame.K_d]:
         x += speed
 
+    # 화면 밖으로 못 나가게 제한
+    if x < radius:
+        x = radius
+    if x > 800 - radius:
+        x = 800 - radius
+    if y < radius:
+        y = radius
+    if y > 600 - radius:
+        y = 600 - radius
+
     screen.fill(WHITE)
-    pygame.draw.circle(screen, BLUE, (x, y), 50)
+    pygame.draw.circle(screen, BLUE, (x, y), radius)
 
     pygame.display.flip()
     clock.tick(60)
