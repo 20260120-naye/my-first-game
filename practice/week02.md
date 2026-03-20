@@ -1,4 +1,4 @@
-# Week 3 실습 기록
+# Week 2 실습 기록
 
 ## 목표
 pygame test 연습
