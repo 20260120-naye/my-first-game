@@ -41,9 +41,12 @@ class Particle:
         self.life = random.randint(50, 100)
         self.max_life = self.life
 
-        self.size = random.uniform(3, 8)
+        self.size = random.uniform(12, 30)
 
-        # Soft pastel colors
+        # 다양한 도형 선택
+        self.shape = random.choice(["circle", "square", "triangle", "diamond", "star"])
+
+        # 부드러운 색감
         self.color = (
             random.randint(180, 255),
             random.randint(150, 255),
@@ -54,10 +57,10 @@ class Particle:
         self.x += self.vx
         self.y += self.vy
 
-        # Gravity
+        # 중력
         self.vy += 0.07
 
-        # Slow down slightly
+        # 살짝 감속
         self.vx *= 0.99
         self.vy *= 0.99
 
@@ -67,22 +70,47 @@ class Particle:
         if self.life <= 0:
             return
 
-        # Fade effect
         alpha = int(255 * (self.life / self.max_life))
+        size = int(self.size * (self.life / self.max_life))
 
-        glow_surface = pygame.Surface((40, 40), pygame.SRCALPHA)
-        glow_color = (*self.color, alpha // 2)
-        pygame.draw.circle(glow_surface, glow_color, (20, 20), int(self.size * 2.2))
+        glow = pygame.Surface((60, 60), pygame.SRCALPHA)
+        pygame.draw.circle(glow, (*self.color, alpha // 3), (30, 30), size * 2)
+        surf.blit(glow, (self.x - 30, self.y - 30))
 
-        surf.blit(glow_surface, (self.x - 20, self.y - 20))
+        x = int(self.x)
+        y = int(self.y)
 
-        # Main particle
-        pygame.draw.circle(
-            surf,
-            self.color,
-            (int(self.x), int(self.y)),
-            int(self.size * (self.life / self.max_life))
-        )
+        # ---------- 여러 도형 ----------
+
+        if self.shape == "circle":
+            pygame.draw.circle(surf, self.color, (x, y), size)
+
+        elif self.shape == "square":
+            pygame.draw.rect(surf, self.color, (x - size, y - size, size * 2, size * 2))
+
+        elif self.shape == "triangle":
+            pygame.draw.polygon(
+                surf,
+                self.color,
+                [(x, y - size), (x - size, y + size), (x + size, y + size)]
+            )
+
+        elif self.shape == "diamond":
+            pygame.draw.polygon(
+                surf,
+                self.color,
+                [(x, y - size), (x - size, y), (x, y + size), (x + size, y)]
+            )
+
+        elif self.shape == "star":
+            points = []
+            for i in range(10):
+                angle = i * math.pi / 5
+                r = size if i % 2 == 0 else size // 2
+                px = x + math.cos(angle) * r
+                py = y + math.sin(angle) * r
+                points.append((px, py))
+            pygame.draw.polygon(surf, self.color, points)
 
     def alive(self):
         return self.life > 0
@@ -103,12 +131,12 @@ while running:
 
     # Left click = normal particles
     if buttons[0]:
-        for _ in range(10):
+        for _ in range(1):
             particles.append(Particle(mouse[0], mouse[1]))
 
     # Right click = burst explosion
     if buttons[2]:
-        for _ in range(40):
+        for _ in range(4):
             particles.append(Particle(mouse[0], mouse[1]))
 
     time += 0.03
