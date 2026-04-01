@@ -42,7 +42,7 @@ clock = pygame.time.Clock()
 font = get_korean_font(36)
 font_big = get_korean_font(72)
 font_mid = get_korean_font(50) 
-font_sub = get_korean_font(30)   
+font_sub = get_korean_font(30)    
 font_small = get_korean_font(24) 
 
 # --- 전투 박스 (아레나) 설정 ---
@@ -110,7 +110,6 @@ def draw_realistic_knife(surf, rect, direction):
 
 # --- 귀여운 캐릭터 그리기 함수 ---
 def draw_cute_girl(surf, cx, cy, is_happy=False, is_dead=False, is_hurt=False):
-    # 피격(is_hurt) 시 붉은 톤으로 색상 임시 변경
     skin = (255, 100, 100) if is_hurt else CHAR_SKIN
     hair = (200, 50, 50) if is_hurt else CHAR_HAIR
     dress = (255, 50, 50) if is_hurt else CHAR_DRESS
@@ -139,18 +138,12 @@ def draw_cute_girl(surf, cx, cy, is_happy=False, is_dead=False, is_hurt=False):
     pygame.draw.polygon(surf, hair, [(cx + 50, cy - 10), (cx + 60, cy - 50), (cx + 10, cy - 50)])
     pygame.draw.polygon(surf, hair, [(cx - 20, cy), (cx - 30, cy - 60), (cx + 30, cy - 60), (cx + 20, cy)])
     
-    # --- 눈 그리기 ---
     if is_dead:
-        # 배드 엔딩 시 X자 눈
         pygame.draw.line(surf, eye_color, (cx - 24, cy - 5), (cx - 12, cy + 7), 5)
         pygame.draw.line(surf, eye_color, (cx - 24, cy + 7), (cx - 12, cy - 5), 5)
-        
         pygame.draw.line(surf, eye_color, (cx + 12, cy - 5), (cx + 24, cy + 7), 5)
         pygame.draw.line(surf, eye_color, (cx + 12, cy + 7), (cx + 24, cy - 5), 5)
-        
-        # 입 모양도 약간 변형 (일자)
         pygame.draw.line(surf, eye_color, (cx - 5, cy + 25), (cx + 5, cy + 25), 3)
-        
     elif is_happy:
         for eye_x in [cx - 18, cx + 18]:
             eye_y = cy + 5
@@ -173,8 +166,9 @@ def draw_cute_girl(surf, cx, cy, is_happy=False, is_dead=False, is_hurt=False):
         pygame.draw.polygon(surf, RED, [(cx, cy + 45), (cx + 20, cy + 35), (cx + 20, cy + 55)])
         pygame.draw.circle(surf, YELLOW, (cx, cy + 45), 6)
 
-def spawn_knife():
-    side = random.randint(0, 3)
+# 특정 방향(side_override)을 지정해 칼을 스폰할 수 있도록 수정
+def spawn_knife(side_override=None):
+    side = side_override if side_override is not None else random.randint(0, 3)
     speed = random.randint(7, 12) 
     
     K_LONG = 55
@@ -197,12 +191,16 @@ def spawn_knife():
         y = random.randint(arena_rect.top, arena_rect.bottom - K_SHORT)
         return pygame.Rect(x, y, K_LONG, K_SHORT), -speed, 0, 'left'
 
+# --- 수정된 게임 오버 화면 함수 ---
 def game_over_screen():
     screen.fill(BLACK)
     text1 = font_big.render("GAME OVER", True, RED)
-    text2 = font.render("Press 'R' to Restart", True, WHITE)
-    screen.blit(text1, (WIDTH // 2 - text1.get_width() // 2, HEIGHT // 2 - 50))
-    screen.blit(text2, (WIDTH // 2 - text2.get_width() // 2, HEIGHT // 2 + 30))
+    text2 = font.render("다시 시작 'R'", True, WHITE)
+    text3 = font.render("종료 'Q'", True, GRAY) # 종료 안내 추가
+    
+    screen.blit(text1, (WIDTH // 2 - text1.get_width() // 2, HEIGHT // 2 - 80))
+    screen.blit(text2, (WIDTH // 2 - text2.get_width() // 2, HEIGHT // 2 + 10))
+    screen.blit(text3, (WIDTH // 2 - text3.get_width() // 2, HEIGHT // 2 + 70))
     pygame.display.flip()
     
     while True:
@@ -213,7 +211,7 @@ def game_over_screen():
             if e.type == pygame.KEYDOWN:
                 if e.key == pygame.K_r: 
                     return
-                if e.key == pygame.K_q: 
+                if e.key == pygame.K_q: # Q를 눌러 종료하는 로직 추가
                     pygame.quit()
                     sys.exit()
 
@@ -235,13 +233,9 @@ def main():
 
     current_pattern = 1
     pattern_timer = 0
-    
     spawn_timer = 0
-    spawn_rate = 18 
     
     shake_timer = 0
-    
-    # 얀데레 피격 효과용 타이머
     enemy_hit_timer = 0
 
     spin_timer = 0
@@ -249,11 +243,9 @@ def main():
     current_spin_val = 1
     heal_amount = 0
 
-    # 사랑 시스템 호감도
     affection = 0 
     max_affection = 3 
     
-    # 공격 시스템 얀데레 체력
     yandere_hp = 3
     max_yandere_hp = 3
 
@@ -272,17 +264,14 @@ def main():
                     elif e.key == pygame.K_d:
                         menu_index = min(2, menu_index + 1)
                     elif e.key == pygame.K_z or e.key == pygame.K_RETURN:
-                        if menu_index == 2:
-                            game_state = "HEAL_WAIT"
-                        elif menu_index == 1:
-                            game_state = "LOVE_WAIT" 
-                        elif menu_index == 0:
-                            game_state = "ATTACK_WAIT" # 공격 메뉴 선택
+                        if menu_index == 2: game_state = "HEAL_WAIT"
+                        elif menu_index == 1: game_state = "LOVE_WAIT" 
+                        elif menu_index == 0: game_state = "ATTACK_WAIT"
                             
                 elif game_state == "ATTACK_WAIT":
                     if e.key == pygame.K_z or e.key == pygame.K_RETURN:
                         yandere_hp -= 1
-                        enemy_hit_timer = 20 # 얀데레 피격 이펙트 지속 시간 설정
+                        enemy_hit_timer = 20 
                         game_state = "ATTACK_RESULT"
                     elif e.key == pygame.K_ESCAPE:
                         game_state = "MENU"
@@ -294,10 +283,12 @@ def main():
                         else:
                             game_state = "DODGE"
                             pattern_timer = 0
-                            current_pattern = 1
-                            player.centerx = arena_rect.centerx
-                            player.centery = arena_rect.centery
+                            player.centerx, player.centery = arena_rect.centerx, arena_rect.centery
                             knives.clear()
+                            
+                            current_pattern += 1
+                            if current_pattern > 8:
+                                current_pattern = 1
                             
                 elif game_state == "LOVE_WAIT":
                     if e.key == pygame.K_z or e.key == pygame.K_RETURN:
@@ -313,10 +304,12 @@ def main():
                         else:
                             game_state = "DODGE"
                             pattern_timer = 0
-                            current_pattern = 1
-                            player.centerx = arena_rect.centerx
-                            player.centery = arena_rect.centery
+                            player.centerx, player.centery = arena_rect.centerx, arena_rect.centery
                             knives.clear()
+                            
+                            current_pattern += 1
+                            if current_pattern > 8:
+                                current_pattern = 1
                             
                 elif game_state == "HEAL_WAIT":
                     if e.key == pygame.K_z or e.key == pygame.K_RETURN:
@@ -329,10 +322,12 @@ def main():
                     if e.key == pygame.K_z or e.key == pygame.K_RETURN:
                         game_state = "DODGE"
                         pattern_timer = 0
-                        current_pattern = 1
-                        player.centerx = arena_rect.centerx
-                        player.centery = arena_rect.centery
+                        player.centerx, player.centery = arena_rect.centerx, arena_rect.centery
                         knives.clear()
+                        
+                        current_pattern += 1
+                        if current_pattern > 8:
+                            current_pattern = 1
                         
                 elif game_state in ["TRUE_ENDING", "BAD_ENDING"]:
                     if e.key == pygame.K_r: 
@@ -356,18 +351,61 @@ def main():
             if player.bottom > arena_rect.bottom - BORDER_THICKNESS: player.bottom = arena_rect.bottom - BORDER_THICKNESS
 
             pattern_timer += 1 
+            spawn_timer += 1
 
-            if current_pattern == 1:
-                spawn_timer += 1
-                if spawn_timer >= spawn_rate:
+            # ================= [공격 패턴 구현 구간] =================
+            if current_pattern == 1: # 무작위 사방
+                if spawn_timer >= 18:
                     spawn_timer = 0
                     rect, dx, dy, direction = spawn_knife()
                     knives.append([rect, dx, dy, direction])
-                
-                if pattern_timer >= 600:
-                    game_state = "MENU"
-                    knives.clear() 
-                    menu_index = 0 
+                    
+            elif current_pattern == 2: # 유튜브 2:40~2:48 (언다인 창 패턴: 플레이어를 둘러싸고 좁혀옴)
+                if spawn_timer >= 35: # 35프레임마다 생성 (약 0.6초)
+                    spawn_timer = 0
+                    speed = 7
+                    dist = 220 # 플레이어의 현재 위치에서 220만큼 떨어진 곳(아레나 바깥)에서 생성
+                    K_LONG = 55
+                    K_SHORT = 18
+                    
+                    # 칼들이 생성될 시점의 플레이어 위치 기록 (이 위치로 칼들이 모여듦)
+                    px = player.centerx
+                    py = player.centery
+                    
+                    # 위에서 아래로 날아오는 칼
+                    r1 = pygame.Rect(px - K_SHORT//2, py - dist, K_SHORT, K_LONG)
+                    knives.append([r1, 0, speed, 'down'])
+                    
+                    # 아래에서 위로 날아오는 칼
+                    r2 = pygame.Rect(px - K_SHORT//2, py + dist, K_SHORT, K_LONG)
+                    knives.append([r2, 0, -speed, 'up'])
+                    
+                    # 왼쪽에서 오른쪽으로 날아오는 칼
+                    r3 = pygame.Rect(px - dist, py - K_SHORT//2, K_LONG, K_SHORT)
+                    knives.append([r3, speed, 0, 'right'])
+                    
+                    # 오른쪽에서 왼쪽으로 날아오는 칼
+                    r4 = pygame.Rect(px + dist, py - K_SHORT//2, K_LONG, K_SHORT)
+                    knives.append([r4, -speed, 0, 'left'])
+                    
+            elif current_pattern == 3:
+                pass # 여기에 3번 패턴 코드 작성
+            elif current_pattern == 4:
+                pass # 여기에 4번 패턴 코드 작성
+            elif current_pattern == 5:
+                pass # 여기에 5번 패턴 코드 작성
+            elif current_pattern == 6:
+                pass # 여기에 6번 패턴 코드 작성
+            elif current_pattern == 7:
+                pass # 여기에 7번 패턴 코드 작성
+            elif current_pattern == 8:
+                pass # 여기에 8번 패턴 코드 작성
+            # =========================================================
+
+            if pattern_timer >= 600:
+                game_state = "MENU"
+                knives.clear() 
+                menu_index = 0 
 
         if game_state == "HEAL_SPIN":
             spin_timer -= 1
@@ -418,9 +456,10 @@ def main():
             if invincible == 0 or (invincible // 5) % 2 == 0:
                 pygame.draw.rect(canvas, RED, player)
                 
+            pattern_text = font_small.render(f"패턴 {current_pattern}", True, GRAY)
+            canvas.blit(pattern_text, (arena_rect.x, arena_rect.y - 30))
+                
         elif game_state in ["MENU", "HEAL_WAIT", "HEAL_SPIN", "HEAL_RESULT", "LOVE_WAIT", "LOVE_RESULT", "ATTACK_WAIT", "ATTACK_RESULT"]:
-            
-            # 피격 효과 타이머 계산 및 좌표 흔들림 적용
             draw_x = WIDTH // 2
             draw_y = 170
             is_hurt = False
@@ -468,15 +507,12 @@ def main():
             pygame.draw.rect(canvas, BLACK, roulette_rect)
             pygame.draw.rect(canvas, WHITE, roulette_rect, BORDER_THICKNESS)
             
-            # --- 공격 시스템 UI ---
             if game_state == "ATTACK_WAIT":
                 text1 = font_sub.render("얀데레를 공격 하시겠습니까?", True, RED) 
                 text2 = font_small.render("확인: Enter   취소: ESC", True, WHITE)
-                
                 gap = 15
                 total_h = text1.get_height() + gap + text2.get_height()
                 start_y = roulette_rect.centery - total_h // 2
-                
                 canvas.blit(text1, (roulette_rect.centerx - text1.get_width()//2, start_y))
                 canvas.blit(text2, (roulette_rect.centerx - text2.get_width()//2, start_y + text1.get_height() + gap))
                 
@@ -484,25 +520,20 @@ def main():
                 text1 = font_sub.render("얀데레를 공격했습니다!", True, RED)
                 text2 = font_small.render(f"얀데레 체력: {yandere_hp} / {max_yandere_hp}", True, YELLOW)
                 text3 = font_small.render("엔터(Enter)를 눌러 복귀", True, GRAY_BLADE)
-                
                 gap = 15
                 total_h = text1.get_height() + gap + text2.get_height() + gap + text3.get_height()
                 start_y = roulette_rect.centery - total_h // 2
-                
                 canvas.blit(text1, (roulette_rect.centerx - text1.get_width()//2, start_y))
                 canvas.blit(text2, (roulette_rect.centerx - text2.get_width()//2, start_y + text1.get_height() + gap))
                 canvas.blit(text3, (roulette_rect.centerx - text3.get_width()//2, start_y + text1.get_height() + gap*2 + text2.get_height()))
             
-            # --- 사랑 시스템 UI ---
             elif game_state == "LOVE_WAIT":
                 text1_a = font_sub.render("얀데레에게 사랑을", True, CHAR_DRESS) 
                 text1_b = font_sub.render("보내겠습니까?", True, CHAR_DRESS) 
                 text2 = font_small.render("확인: Enter   취소: ESC", True, WHITE)
-                
                 gap = 15
                 total_h = text1_a.get_height() + gap + text1_b.get_height() + gap + text2.get_height()
                 start_y = roulette_rect.centery - total_h // 2
-                
                 canvas.blit(text1_a, (roulette_rect.centerx - text1_a.get_width()//2, start_y))
                 canvas.blit(text1_b, (roulette_rect.centerx - text1_b.get_width()//2, start_y + text1_a.get_height() + gap))
                 canvas.blit(text2, (roulette_rect.centerx - text2.get_width()//2, start_y + text1_a.get_height() + text1_b.get_height() + gap * 2))
@@ -511,11 +542,9 @@ def main():
                 text1 = font_sub.render("얀데레에게 사랑을 보냈습니다!", True, RED)
                 text2 = font_small.render(f"현재 호감도: {affection} / {max_affection}", True, YELLOW)
                 text3 = font_small.render("엔터(Enter)를 눌러 복귀", True, GRAY_BLADE)
-                
                 gap = 15
                 total_h = text1.get_height() + gap + text2.get_height() + gap + text3.get_height()
                 start_y = roulette_rect.centery - total_h // 2
-                
                 canvas.blit(text1, (roulette_rect.centerx - text1.get_width()//2, start_y))
                 canvas.blit(text2, (roulette_rect.centerx - text2.get_width()//2, start_y + text1.get_height() + gap))
                 canvas.blit(text3, (roulette_rect.centerx - text3.get_width()//2, start_y + text1.get_height() + gap*2 + text2.get_height()))
@@ -525,7 +554,6 @@ def main():
                 text1 = font.render("회복하려면", True, WHITE)
                 text2 = font.render("엔터(Enter)를 누르세요", True, WHITE)
                 text3 = font.render("취소: ESC", True, GRAY_BLADE) 
-                
                 canvas.blit(info_text, (roulette_rect.centerx - info_text.get_width()//2, roulette_rect.centery - 70))
                 canvas.blit(text1, (roulette_rect.centerx - text1.get_width()//2, roulette_rect.centery - 30))
                 canvas.blit(text2, (roulette_rect.centerx - text2.get_width()//2, roulette_rect.centery + 10))
@@ -538,66 +566,50 @@ def main():
             elif game_state == "HEAL_RESULT":
                 text = font_mid.render(f"체력 {heal_amount} 회복!", True, YELLOW)
                 text2 = font.render("엔터를 눌러 복귀", True, WHITE)
-                
                 gap = 10 
                 total_height = text.get_height() + gap + text2.get_height()
                 start_y = roulette_rect.centery - (total_height // 2)
-
                 canvas.blit(text, (roulette_rect.centerx - text.get_width()//2, start_y))
                 canvas.blit(text2, (roulette_rect.centerx - text2.get_width()//2, start_y + text.get_height() + gap))
 
         elif game_state == "TRUE_ENDING":
             draw_cute_girl(canvas, WIDTH // 2, HEIGHT // 2 - 100, is_happy=True)
-            
             ending_box = pygame.Rect(100, HEIGHT - 280, WIDTH - 200, 200)
             pygame.draw.rect(canvas, BLACK, ending_box)
             pygame.draw.rect(canvas, CHAR_DRESS, ending_box, BORDER_THICKNESS) 
-            
             text1 = font.render("그녀는 당신의 사랑을 받아들였습니다...", True, CHAR_DRESS)
             text2 = font_sub.render("얀데레의 공격이 멈췄습니다. [ 해피 엔딩 ♥ ]", True, WHITE)
-            text3 = font_small.render("다시 시작 'R'  /  종료 'Q'", True, GRAY)
-            
+            text3 = font_small.render("다시 시작 'R'   /   종료 'Q'", True, GRAY)
             gap = 20
             total_h = text1.get_height() + gap + text2.get_height() + gap + text3.get_height()
             start_y = ending_box.centery - (total_h // 2)
-            
             canvas.blit(text1, (ending_box.centerx - text1.get_width() // 2, start_y))
             canvas.blit(text2, (ending_box.centerx - text2.get_width() // 2, start_y + text1.get_height() + gap))
             canvas.blit(text3, (ending_box.centerx - text3.get_width() // 2, start_y + text1.get_height() + gap * 2 + text2.get_height()))
             
         elif game_state == "BAD_ENDING":
-            # 배드엔딩에서는 X눈 표시!
             draw_cute_girl(canvas, WIDTH // 2, HEIGHT // 2 - 100, is_dead=True)
-            
             ending_box = pygame.Rect(100, HEIGHT - 280, WIDTH - 200, 200)
             pygame.draw.rect(canvas, BLACK, ending_box)
             pygame.draw.rect(canvas, RED, ending_box, BORDER_THICKNESS) 
-            
             text1 = font.render("당신은 그녀를 쓰러뜨렸습니다...", True, RED)
             text2 = font_sub.render("하지만 뭔가 마음이 편치 않습니다. [ 배드 엔딩 ]", True, WHITE)
-            text3 = font_small.render("다시 시작 'R'  /  종료 'Q'", True, GRAY)
-            
+            text3 = font_small.render("다시 시작 'R'   /   종료 'Q'", True, GRAY)
             gap = 20
             total_h = text1.get_height() + gap + text2.get_height() + gap + text3.get_height()
             start_y = ending_box.centery - (total_h // 2)
-            
             canvas.blit(text1, (ending_box.centerx - text1.get_width() // 2, start_y))
             canvas.blit(text2, (ending_box.centerx - text2.get_width() // 2, start_y + text1.get_height() + gap))
             canvas.blit(text3, (ending_box.centerx - text3.get_width() // 2, start_y + text1.get_height() + gap * 2 + text2.get_height()))
 
-        # --- 체력 UI 렌더링 (공통) ---
         hp_label = font.render("HP: ", True, RED)
         heart_surf = font.render("♥ ", True, RED)
-        
         label_w = hp_label.get_width()
         heart_w = heart_surf.get_width()
-        
         total_hp_width = label_w + heart_w * max_lives
         hp_x = WIDTH - total_hp_width - 20
         hp_y = 20
-        
         canvas.blit(hp_label, (hp_x, hp_y))
-        
         for i in range(lives):
             canvas.blit(heart_surf, (hp_x + label_w + i * heart_w, hp_y))
             
