@@ -26,7 +26,7 @@ BROWN_HANDLE = (139, 69, 19)
 BLOOD_RED = (180, 0, 0) 
 GRAY = (150, 150, 150) 
 
-# 캐릭터 전용 색상
+# 캐릭터 전용 기본 색상
 CHAR_SKIN = (255, 218, 185)
 CHAR_HAIR = (147, 112, 219) # 연보라색 머리
 CHAR_DRESS = (255, 182, 193) # 분홍색 치마
@@ -109,16 +109,23 @@ def draw_realistic_knife(surf, rect, direction):
         pygame.draw.rect(surf, BLOOD_RED, (x + w*0.3, y + h*0.45, w*0.25, h*0.1))
 
 # --- 귀여운 캐릭터 그리기 함수 ---
-def draw_cute_girl(surf, cx, cy, is_happy=False):
-    pygame.draw.ellipse(surf, CHAR_HAIR, (cx - 70, cy - 60, 140, 160))
-    pygame.draw.rect(surf, CHAR_SKIN, (cx - 25, cy + 90, 12, 60))
-    pygame.draw.rect(surf, CHAR_SKIN, (cx + 13, cy + 90, 12, 60))
-    pygame.draw.ellipse(surf, CHAR_EYE, (cx - 30, cy + 140, 20, 15))
-    pygame.draw.ellipse(surf, CHAR_EYE, (cx + 10, cy + 140, 20, 15))
-    pygame.draw.polygon(surf, CHAR_DRESS, [(cx, cy + 20), (cx - 70, cy + 110), (cx + 70, cy + 110)])
+def draw_cute_girl(surf, cx, cy, is_happy=False, is_dead=False, is_hurt=False):
+    # 피격(is_hurt) 시 붉은 톤으로 색상 임시 변경
+    skin = (255, 100, 100) if is_hurt else CHAR_SKIN
+    hair = (200, 50, 50) if is_hurt else CHAR_HAIR
+    dress = (255, 50, 50) if is_hurt else CHAR_DRESS
+    eye_color = RED if is_hurt else CHAR_EYE
+    blush = RED if is_hurt else CHAR_BLUSH
+
+    pygame.draw.ellipse(surf, hair, (cx - 70, cy - 60, 140, 160))
+    pygame.draw.rect(surf, skin, (cx - 25, cy + 90, 12, 60))
+    pygame.draw.rect(surf, skin, (cx + 13, cy + 90, 12, 60))
+    pygame.draw.ellipse(surf, eye_color, (cx - 30, cy + 140, 20, 15))
+    pygame.draw.ellipse(surf, eye_color, (cx + 10, cy + 140, 20, 15))
+    pygame.draw.polygon(surf, dress, [(cx, cy + 20), (cx - 70, cy + 110), (cx + 70, cy + 110)])
     pygame.draw.polygon(surf, WHITE, [(cx - 70, cy + 110), (cx + 70, cy + 110), (cx, cy + 95)])
-    pygame.draw.line(surf, CHAR_SKIN, (cx - 25, cy + 40), (cx - 55, cy + 80), 10)
-    pygame.draw.line(surf, CHAR_SKIN, (cx + 25, cy + 40), (cx + 55, cy + 80), 10)
+    pygame.draw.line(surf, skin, (cx - 25, cy + 40), (cx - 55, cy + 80), 10)
+    pygame.draw.line(surf, skin, (cx + 25, cy + 40), (cx + 55, cy + 80), 10)
 
     kw, kh = 18, 55 
     left_knife_rect = pygame.Rect(cx - 55 - kw//2, cy + 30, kw, kh)
@@ -127,33 +134,44 @@ def draw_cute_girl(surf, cx, cy, is_happy=False):
     draw_realistic_knife(surf, left_knife_rect, 'up')
     draw_realistic_knife(surf, right_knife_rect, 'up')
 
-    pygame.draw.circle(surf, CHAR_SKIN, (cx, cy), 50)
-    pygame.draw.polygon(surf, CHAR_HAIR, [(cx - 50, cy - 10), (cx - 60, cy - 50), (cx - 10, cy - 50)])
-    pygame.draw.polygon(surf, CHAR_HAIR, [(cx + 50, cy - 10), (cx + 60, cy - 50), (cx + 10, cy - 50)])
-    pygame.draw.polygon(surf, CHAR_HAIR, [(cx - 20, cy), (cx - 30, cy - 60), (cx + 30, cy - 60), (cx + 20, cy)])
+    pygame.draw.circle(surf, skin, (cx, cy), 50)
+    pygame.draw.polygon(surf, hair, [(cx - 50, cy - 10), (cx - 60, cy - 50), (cx - 10, cy - 50)])
+    pygame.draw.polygon(surf, hair, [(cx + 50, cy - 10), (cx + 60, cy - 50), (cx + 10, cy - 50)])
+    pygame.draw.polygon(surf, hair, [(cx - 20, cy), (cx - 30, cy - 60), (cx + 30, cy - 60), (cx + 20, cy)])
     
-    # --- 눈 그리기 (해피 엔딩일 때는 하트 눈) ---
-    if is_happy:
+    # --- 눈 그리기 ---
+    if is_dead:
+        # 배드 엔딩 시 X자 눈
+        pygame.draw.line(surf, eye_color, (cx - 24, cy - 5), (cx - 12, cy + 7), 5)
+        pygame.draw.line(surf, eye_color, (cx - 24, cy + 7), (cx - 12, cy - 5), 5)
+        
+        pygame.draw.line(surf, eye_color, (cx + 12, cy - 5), (cx + 24, cy + 7), 5)
+        pygame.draw.line(surf, eye_color, (cx + 12, cy + 7), (cx + 24, cy - 5), 5)
+        
+        # 입 모양도 약간 변형 (일자)
+        pygame.draw.line(surf, eye_color, (cx - 5, cy + 25), (cx + 5, cy + 25), 3)
+        
+    elif is_happy:
         for eye_x in [cx - 18, cx + 18]:
             eye_y = cy + 5
-            # 하트를 그리기 위한 두 개의 원과 역삼각형
             pygame.draw.circle(surf, RED, (eye_x - 3, eye_y - 2), 4)
             pygame.draw.circle(surf, RED, (eye_x + 3, eye_y - 2), 4)
             pygame.draw.polygon(surf, RED, [(eye_x - 7, eye_y), (eye_x + 7, eye_y), (eye_x, eye_y + 7)])
-            # 하트 눈에도 귀여운 흰색 하이라이트 추가
             pygame.draw.circle(surf, WHITE, (eye_x - 2, eye_y - 2), 1)
     else:
-        pygame.draw.circle(surf, CHAR_EYE, (cx - 18, cy + 5), 6)
-        pygame.draw.circle(surf, CHAR_EYE, (cx + 18, cy + 5), 6)
+        pygame.draw.circle(surf, eye_color, (cx - 18, cy + 5), 6)
+        pygame.draw.circle(surf, eye_color, (cx + 18, cy + 5), 6)
         pygame.draw.circle(surf, WHITE, (cx - 19, cy + 3), 2)
         pygame.draw.circle(surf, WHITE, (cx + 17, cy + 3), 2)
         
-    pygame.draw.ellipse(surf, CHAR_BLUSH, (cx - 35, cy + 15, 16, 8))
-    pygame.draw.ellipse(surf, CHAR_BLUSH, (cx + 19, cy + 15, 16, 8))
-    pygame.draw.polygon(surf, CHAR_EYE, [(cx - 6, cy + 25), (cx + 6, cy + 25), (cx, cy + 32)])
-    pygame.draw.polygon(surf, RED, [(cx, cy + 45), (cx - 20, cy + 35), (cx - 20, cy + 55)])
-    pygame.draw.polygon(surf, RED, [(cx, cy + 45), (cx + 20, cy + 35), (cx + 20, cy + 55)])
-    pygame.draw.circle(surf, YELLOW, (cx, cy + 45), 6)
+    pygame.draw.ellipse(surf, blush, (cx - 35, cy + 15, 16, 8))
+    pygame.draw.ellipse(surf, blush, (cx + 19, cy + 15, 16, 8))
+    
+    if not is_dead:
+        pygame.draw.polygon(surf, eye_color, [(cx - 6, cy + 25), (cx + 6, cy + 25), (cx, cy + 32)])
+        pygame.draw.polygon(surf, RED, [(cx, cy + 45), (cx - 20, cy + 35), (cx - 20, cy + 55)])
+        pygame.draw.polygon(surf, RED, [(cx, cy + 45), (cx + 20, cy + 35), (cx + 20, cy + 55)])
+        pygame.draw.circle(surf, YELLOW, (cx, cy + 45), 6)
 
 def spawn_knife():
     side = random.randint(0, 3)
@@ -223,6 +241,9 @@ def main():
     
     shake_timer = 0
     
+    # 얀데레 피격 효과용 타이머
+    enemy_hit_timer = 0
+
     spin_timer = 0
     spin_duration = 120 
     current_spin_val = 1
@@ -231,6 +252,10 @@ def main():
     # 사랑 시스템 호감도
     affection = 0 
     max_affection = 3 
+    
+    # 공격 시스템 얀데레 체력
+    yandere_hp = 3
+    max_yandere_hp = 3
 
     while True:
         clock.tick(FPS)
@@ -251,6 +276,21 @@ def main():
                             game_state = "HEAL_WAIT"
                         elif menu_index == 1:
                             game_state = "LOVE_WAIT" 
+                        elif menu_index == 0:
+                            game_state = "ATTACK_WAIT" # 공격 메뉴 선택
+                            
+                elif game_state == "ATTACK_WAIT":
+                    if e.key == pygame.K_z or e.key == pygame.K_RETURN:
+                        yandere_hp -= 1
+                        enemy_hit_timer = 20 # 얀데레 피격 이펙트 지속 시간 설정
+                        game_state = "ATTACK_RESULT"
+                    elif e.key == pygame.K_ESCAPE:
+                        game_state = "MENU"
+                        
+                elif game_state == "ATTACK_RESULT":
+                    if e.key == pygame.K_z or e.key == pygame.K_RETURN:
+                        if yandere_hp <= 0:
+                            game_state = "BAD_ENDING"
                         else:
                             game_state = "DODGE"
                             pattern_timer = 0
@@ -294,7 +334,7 @@ def main():
                         player.centery = arena_rect.centery
                         knives.clear()
                         
-                elif game_state == "TRUE_ENDING":
+                elif game_state in ["TRUE_ENDING", "BAD_ENDING"]:
                     if e.key == pygame.K_r: 
                         main()
                         return
@@ -378,9 +418,20 @@ def main():
             if invincible == 0 or (invincible // 5) % 2 == 0:
                 pygame.draw.rect(canvas, RED, player)
                 
-        elif game_state in ["MENU", "HEAL_WAIT", "HEAL_SPIN", "HEAL_RESULT", "LOVE_WAIT", "LOVE_RESULT"]:
+        elif game_state in ["MENU", "HEAL_WAIT", "HEAL_SPIN", "HEAL_RESULT", "LOVE_WAIT", "LOVE_RESULT", "ATTACK_WAIT", "ATTACK_RESULT"]:
             
-            draw_cute_girl(canvas, WIDTH // 2, 170)
+            # 피격 효과 타이머 계산 및 좌표 흔들림 적용
+            draw_x = WIDTH // 2
+            draw_y = 170
+            is_hurt = False
+            
+            if enemy_hit_timer > 0:
+                draw_x += random.randint(-8, 8)
+                draw_y += random.randint(-8, 8)
+                is_hurt = True
+                enemy_hit_timer -= 1
+
+            draw_cute_girl(canvas, draw_x, draw_y, is_hurt=is_hurt)
 
             pygame.draw.rect(canvas, WHITE, MENU_BOX_RECT, BORDER_THICKNESS)
             
@@ -410,15 +461,40 @@ def main():
                     heart_y = rect.y + (rect.height - PLAYER_H) // 2
                     pygame.draw.rect(canvas, RED, (heart_x, heart_y, PLAYER_W, PLAYER_H))
 
-        if game_state in ["HEAL_WAIT", "HEAL_SPIN", "HEAL_RESULT", "LOVE_WAIT", "LOVE_RESULT"]:
+        if game_state in ["HEAL_WAIT", "HEAL_SPIN", "HEAL_RESULT", "LOVE_WAIT", "LOVE_RESULT", "ATTACK_WAIT", "ATTACK_RESULT"]:
             roulette_w, roulette_h = 450, 200
             roulette_rect = pygame.Rect(WIDTH//2 - roulette_w//2, HEIGHT//2 - roulette_h//2, roulette_w, roulette_h)
             
             pygame.draw.rect(canvas, BLACK, roulette_rect)
             pygame.draw.rect(canvas, WHITE, roulette_rect, BORDER_THICKNESS)
             
-            if game_state == "LOVE_WAIT":
-                # 텍스트를 두 줄로 나누고 높이 계산으로 수직 중앙 정렬
+            # --- 공격 시스템 UI ---
+            if game_state == "ATTACK_WAIT":
+                text1 = font_sub.render("얀데레를 공격 하시겠습니까?", True, RED) 
+                text2 = font_small.render("확인: Enter   취소: ESC", True, WHITE)
+                
+                gap = 15
+                total_h = text1.get_height() + gap + text2.get_height()
+                start_y = roulette_rect.centery - total_h // 2
+                
+                canvas.blit(text1, (roulette_rect.centerx - text1.get_width()//2, start_y))
+                canvas.blit(text2, (roulette_rect.centerx - text2.get_width()//2, start_y + text1.get_height() + gap))
+                
+            elif game_state == "ATTACK_RESULT":
+                text1 = font_sub.render("얀데레를 공격했습니다!", True, RED)
+                text2 = font_small.render(f"얀데레 체력: {yandere_hp} / {max_yandere_hp}", True, YELLOW)
+                text3 = font_small.render("엔터(Enter)를 눌러 복귀", True, GRAY_BLADE)
+                
+                gap = 15
+                total_h = text1.get_height() + gap + text2.get_height() + gap + text3.get_height()
+                start_y = roulette_rect.centery - total_h // 2
+                
+                canvas.blit(text1, (roulette_rect.centerx - text1.get_width()//2, start_y))
+                canvas.blit(text2, (roulette_rect.centerx - text2.get_width()//2, start_y + text1.get_height() + gap))
+                canvas.blit(text3, (roulette_rect.centerx - text3.get_width()//2, start_y + text1.get_height() + gap*2 + text2.get_height()))
+            
+            # --- 사랑 시스템 UI ---
+            elif game_state == "LOVE_WAIT":
                 text1_a = font_sub.render("얀데레에게 사랑을", True, CHAR_DRESS) 
                 text1_b = font_sub.render("보내겠습니까?", True, CHAR_DRESS) 
                 text2 = font_small.render("확인: Enter   취소: ESC", True, WHITE)
@@ -432,7 +508,6 @@ def main():
                 canvas.blit(text2, (roulette_rect.centerx - text2.get_width()//2, start_y + text1_a.get_height() + text1_b.get_height() + gap * 2))
             
             elif game_state == "LOVE_RESULT":
-                # 글씨 크기를 줄이고 3줄 높이 계산으로 수직 중앙 정렬
                 text1 = font_sub.render("얀데레에게 사랑을 보냈습니다!", True, RED)
                 text2 = font_small.render(f"현재 호감도: {affection} / {max_affection}", True, YELLOW)
                 text3 = font_small.render("엔터(Enter)를 눌러 복귀", True, GRAY_BLADE)
@@ -472,24 +547,40 @@ def main():
                 canvas.blit(text2, (roulette_rect.centerx - text2.get_width()//2, start_y + text.get_height() + gap))
 
         elif game_state == "TRUE_ENDING":
-            # is_happy=True 옵션을 전달하여 하트 눈 발동!
             draw_cute_girl(canvas, WIDTH // 2, HEIGHT // 2 - 100, is_happy=True)
             
             ending_box = pygame.Rect(100, HEIGHT - 280, WIDTH - 200, 200)
             pygame.draw.rect(canvas, BLACK, ending_box)
             pygame.draw.rect(canvas, CHAR_DRESS, ending_box, BORDER_THICKNESS) 
             
-            # --- 텍스트 크기 축소 (font_mid -> font, font -> font_sub, font_small 적용) ---
             text1 = font.render("그녀는 당신의 사랑을 받아들였습니다...", True, CHAR_DRESS)
             text2 = font_sub.render("얀데레의 공격이 멈췄습니다. [ 해피 엔딩 ♥ ]", True, WHITE)
             text3 = font_small.render("다시 시작 'R'  /  종료 'Q'", True, GRAY)
             
-            # --- 시각적으로 수직 중앙에 맞게 높이 계산 ---
-            gap = 20 # 줄 간격
+            gap = 20
             total_h = text1.get_height() + gap + text2.get_height() + gap + text3.get_height()
             start_y = ending_box.centery - (total_h // 2)
             
-            # 텍스트 렌더링 (X축은 박스의 중앙, Y축은 계산된 시작 높이부터 간격만큼 더해줌)
+            canvas.blit(text1, (ending_box.centerx - text1.get_width() // 2, start_y))
+            canvas.blit(text2, (ending_box.centerx - text2.get_width() // 2, start_y + text1.get_height() + gap))
+            canvas.blit(text3, (ending_box.centerx - text3.get_width() // 2, start_y + text1.get_height() + gap * 2 + text2.get_height()))
+            
+        elif game_state == "BAD_ENDING":
+            # 배드엔딩에서는 X눈 표시!
+            draw_cute_girl(canvas, WIDTH // 2, HEIGHT // 2 - 100, is_dead=True)
+            
+            ending_box = pygame.Rect(100, HEIGHT - 280, WIDTH - 200, 200)
+            pygame.draw.rect(canvas, BLACK, ending_box)
+            pygame.draw.rect(canvas, RED, ending_box, BORDER_THICKNESS) 
+            
+            text1 = font.render("당신은 그녀를 쓰러뜨렸습니다...", True, RED)
+            text2 = font_sub.render("하지만 뭔가 마음이 편치 않습니다. [ 배드 엔딩 ]", True, WHITE)
+            text3 = font_small.render("다시 시작 'R'  /  종료 'Q'", True, GRAY)
+            
+            gap = 20
+            total_h = text1.get_height() + gap + text2.get_height() + gap + text3.get_height()
+            start_y = ending_box.centery - (total_h // 2)
+            
             canvas.blit(text1, (ending_box.centerx - text1.get_width() // 2, start_y))
             canvas.blit(text2, (ending_box.centerx - text2.get_width() // 2, start_y + text1.get_height() + gap))
             canvas.blit(text3, (ending_box.centerx - text3.get_width() // 2, start_y + text1.get_height() + gap * 2 + text2.get_height()))
