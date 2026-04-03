@@ -356,7 +356,7 @@ def main():
                     rect, dx, dy, direction, delay = spawn_knife()
                     knives.append([rect, dx, dy, direction, delay])
                     
-            elif current_pattern == 2:
+           # elif current_pattern == 2:
                 if spawn_timer >= 50:
                     spawn_timer = 0
                     speed = 18
@@ -365,39 +365,94 @@ def main():
                     px = player.centerx
                     py = player.centery
 
-                    # 십자와 대각선 번갈아 스폰하기
                     if pattern2_mode == "cross":
-                        angles = [0, 90, 180, 270] # (우, 상, 좌, 하)
+                        angles = [0, 90, 180, 270] 
                         pattern2_mode = "diagonal"
                     else:
-                        angles = [45, 135, 225, 315] # (우상, 좌상, 좌하, 우하)
+                        angles = [45, 135, 225, 315] 
                         pattern2_mode = "cross"
 
                     for ang in angles:
                         rad = math.radians(ang)
                         
-                        # 삼각함수를 활용해 스폰 위치 지정 (플레이어 중심)
                         sx = px + math.cos(rad) * dist
-                        sy = py - math.sin(rad) * dist # Pygame은 Y축이 아래로 증가하므로 마이너스
+                        sy = py - math.sin(rad) * dist 
                         
-                        # 플레이어를 향해 날아갈 방향 벡터 (스폰 반대 방향)
                         dx = -math.cos(rad) * speed
                         dy = math.sin(rad) * speed
                         
-                        # 캐릭터를 바라보는 각도 계산 (atan2 활용)
-                        # -dy, -dx를 넣어 목표 방향을 계산
                         face_angle = math.degrees(math.atan2(-dx, -dy))
                         
-                        # 대각선에서도 공정한 피격 판정을 위해 정사각형 히트박스 생성
                         rect = pygame.Rect(0, 0, 18, 18)
                         rect.center = (int(sx), int(sy))
                         
-                        # 대각선의 정밀한 이동을 위해 소수점 좌표(sx, sy) 추가 저장
-                        # 구조: [rect, dx, dy, 방향(각도), 딜레이, float_X, float_Y]
                         knives.append([rect, dx, dy, face_angle, delay_frames, sx, sy])
                     
-            elif current_pattern == 3: pass
-            elif current_pattern == 4: pass
+           # elif current_pattern == 3: 
+                if spawn_timer >= 40: 
+                    spawn_timer = 0
+                    speed = 6 
+                    K_LONG = 55
+                    K_SHORT = 18
+                    delay_frames = 30 
+                    
+                    num_knives = ARENA_W // K_SHORT + 1
+                    
+                    gap_start = random.randint(0, num_knives - 4)
+                    
+                    for i in range(num_knives):
+                        if gap_start <= i <= gap_start + 2:
+                            continue
+                            
+                        sx = ARENA_X + (i * K_SHORT)
+                        sy = ARENA_Y + ARENA_H + (K_LONG // 2) 
+                        
+                        dx = 0
+                        dy = -speed
+                        face_angle = 0 
+                        
+                        rect = pygame.Rect(0, 0, K_SHORT, K_LONG)
+                        rect.center = (int(sx), int(sy))
+                        
+                        knives.append([rect, dx, dy, face_angle, delay_frames, sx, sy])
+            
+            elif current_pattern == 4:
+                # 유튜브 3:34~3:41 구간 - 육각형 포위망 조여오기 패턴
+                current_spawn_rate = 60
+                
+                if spawn_timer >= current_spawn_rate:
+                    spawn_timer = 0
+                    speed = 15          
+                    dist = 220          
+                    delay_frames = 30   
+                    
+                    px = player.centerx
+                    py = player.centery
+                    
+                    # 변경된 부분: 생성될 때마다 원의 기준 각도를 0~359도 사이에서 랜덤하게 설정
+                    # 이로 인해 매번 포위망의 뚫린 방향이 달라져 위아래 꼼수가 차단됩니다.
+                    base_angle = random.randint(0, 359)
+                    
+                    for i in range(6): 
+                        ang = base_angle + (i * 60)
+                        rad = math.radians(ang)
+                        
+                        sx = px + math.cos(rad) * dist
+                        sy = py - math.sin(rad) * dist
+                        
+                        dx = -math.cos(rad) * speed
+                        dy = math.sin(rad) * speed
+                        
+                        face_angle = math.degrees(math.atan2(-dx, -dy))
+                        
+                        rect = pygame.Rect(0, 0, 18, 18)
+                        rect.center = (int(sx), int(sy))
+                        
+                        alpha = 255      
+                        life_timer = 0   
+                        
+                        knives.append([rect, dx, dy, face_angle, delay_frames, sx, sy, alpha, life_timer])
+                        
             elif current_pattern == 5: pass
             elif current_pattern == 6: pass
             elif current_pattern == 7: pass
@@ -433,18 +488,25 @@ def main():
             
             if delay > 0:
                 knife[4] -= 1
-                is_active = False # 대기 상태일 때는 움직이거나 충돌하지 않음
+                is_active = False 
             else:
-                # 대각선 이동 시 소수점 오차로 궤도가 틀어지는 것을 방지 (float 이동 좌표 적용)
                 if len(knife) > 5:
-                    knife[5] += dx # float X
-                    knife[6] += dy # float Y
+                    knife[5] += dx 
+                    knife[6] += dy 
                     rect.centerx = int(knife[5])
                     rect.centery = int(knife[6])
                 else:
                     rect.x += dx
                     rect.y += dy
-            
+
+                # === [추가된 부분: 투명하게 사라지는 로직] ===
+                if len(knife) > 7: 
+                    knife[8] += 1  
+                    if knife[8] >= 18:
+                        knife[7] -= 50 # <--- 15에서 50으로 변경 (사라지는 속도 훨씬 빠름)
+                        if knife[7] <= 0:
+                            continue 
+
             knife_hitbox = rect 
             
             if game_state == "DODGE" and invincible == 0 and is_active and player_hitbox.colliderect(knife_hitbox):
@@ -468,12 +530,14 @@ def main():
             pygame.draw.rect(canvas, WHITE, arena_rect, BORDER_THICKNESS)
             for knife in knives:
                 delay = knife[4] if len(knife) > 4 else 0
+                alpha = knife[7] if len(knife) > 7 else 255 
+                
                 if delay > 0:
                     blink_speed = 2 if delay < 15 else 5
                     if (delay // blink_speed) % 2 == 0:
-                        draw_realistic_knife(canvas, knife[0], knife[3], 255)
+                        draw_realistic_knife(canvas, knife[0], knife[3], alpha) 
                 else:
-                    draw_realistic_knife(canvas, knife[0], knife[3], 255)
+                    draw_realistic_knife(canvas, knife[0], knife[3], alpha) 
                 
             if invincible == 0 or (invincible // 5) % 2 == 0:
                 pygame.draw.rect(canvas, RED, player)
