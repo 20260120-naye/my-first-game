@@ -416,21 +416,19 @@ def main():
                         
                         knives.append([rect, dx, dy, face_angle, delay_frames, sx, sy])
             
-            elif current_pattern == 4:
+            # elif current_pattern == 4:
                 # 유튜브 3:34~3:41 구간 - 육각형 포위망 조여오기 패턴
                 current_spawn_rate = 60
                 
                 if spawn_timer >= current_spawn_rate:
                     spawn_timer = 0
-                    speed = 15          
+                    speed = 10          
                     dist = 220          
-                    delay_frames = 30   
+                    delay_frames = 25   
                     
                     px = player.centerx
                     py = player.centery
                     
-                    # 변경된 부분: 생성될 때마다 원의 기준 각도를 0~359도 사이에서 랜덤하게 설정
-                    # 이로 인해 매번 포위망의 뚫린 방향이 달라져 위아래 꼼수가 차단됩니다.
                     base_angle = random.randint(0, 359)
                     
                     for i in range(6): 
@@ -452,8 +450,50 @@ def main():
                         life_timer = 0   
                         
                         knives.append([rect, dx, dy, face_angle, delay_frames, sx, sy, alpha, life_timer])
+
+            elif current_pattern == 5:
+                # 유튜브 2:47~2:51 - 아스고어 조여오는 원형 패턴 (빈틈 뚫린 포위망)
+                if spawn_timer >= 45: 
+                    spawn_timer = 0
+                    speed = 6  
+                    dist = 400 # 화면 바깥쪽 생성
+                    delay_frames = 0 
+                    
+                    # 아레나 정중앙을 타겟
+                    cx = arena_rect.centerx
+                    cy = arena_rect.centery
+                    
+                    num_knives = 20 # 원을 이루는 총 칼 개수
+                    gap_size = 4 # 안전지대 구멍 크기
+                    gap_start = random.randint(0, num_knives - 1) 
+                    
+                    gap_indices = [(gap_start + j) % num_knives for j in range(gap_size)]
+                    
+                    for i in range(num_knives):
+                        if i in gap_indices:
+                            continue 
+                            
+                        ang = i * (360 / num_knives)
+                        rad = math.radians(ang)
                         
-            elif current_pattern == 5: pass
+                        # 생성 좌표
+                        sx = cx + math.cos(rad) * dist
+                        sy = cy - math.sin(rad) * dist
+                        
+                        # 방향 벡터
+                        dx = -math.cos(rad) * speed
+                        dy = math.sin(rad) * speed
+                        
+                        face_angle = math.degrees(math.atan2(-dx, -dy))
+                        
+                        rect = pygame.Rect(0, 0, 18, 18)
+                        rect.center = (int(sx), int(sy))
+                        
+                        alpha = 255      
+                        life_timer = 0 # 이동한 시간을 잴 타이머
+                        
+                        knives.append([rect, dx, dy, face_angle, delay_frames, sx, sy, alpha, life_timer])
+                        
             elif current_pattern == 6: pass
             elif current_pattern == 7: pass
             elif current_pattern == 8: pass
@@ -499,13 +539,25 @@ def main():
                     rect.x += dx
                     rect.y += dy
 
-                # === [추가된 부분: 투명하게 사라지는 로직] ===
+                # === [추가 및 변경된 부분: 소멸 로직 수정] ===
                 if len(knife) > 7: 
-                    knife[8] += 1  
-                    if knife[8] >= 18:
-                        knife[7] -= 50 # <--- 15에서 50으로 변경 (사라지는 속도 훨씬 빠름)
-                        if knife[7] <= 0:
+                    knife[8] += 1  # life_timer 증가
+
+                    threshold = 0
+                    if current_pattern == 4:
+                        threshold = 22 # 육각형 패턴
+                    elif current_pattern == 5:
+                        threshold = 67 # 400(거리) / 6(속도) = 66.6... (원형 패턴 정중앙 도착 시점)
+
+                    if threshold > 0 and knife[8] >= threshold:
+                        if current_pattern == 5:
+                            # 5번 패턴은 겹치는 즉시 사라지게 (리스트에 추가 안 함)
                             continue 
+                        else:
+                            # 4번 패턴은 기존처럼 빠르게 페이드아웃
+                            knife[7] -= 50 
+                            if knife[7] <= 0:
+                                continue 
 
             knife_hitbox = rect 
             
