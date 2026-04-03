@@ -1,6 +1,7 @@
 import pygame
 import random
 import sys
+import math # 각도 및 대각선 계산을 위해 추가
 
 pygame.init()
 
@@ -28,8 +29,8 @@ GRAY = (150, 150, 150)
 
 # 캐릭터 전용 기본 색상
 CHAR_SKIN = (255, 218, 185)
-CHAR_HAIR = (147, 112, 219) # 연보라색 머리
-CHAR_DRESS = (255, 182, 193) # 분홍색 치마
+CHAR_HAIR = (147, 112, 219)
+CHAR_DRESS = (255, 182, 193)
 CHAR_EYE = (50, 50, 50)
 CHAR_BLUSH = (255, 160, 160)
 
@@ -45,17 +46,32 @@ font_mid = get_korean_font(50)
 font_sub = get_korean_font(30)    
 font_small = get_korean_font(24) 
 
+# --- 베이스 칼 이미지 생성 함수 ---
+# 모든 방향과 각도로 회전시키기 위해 기본(위쪽을 향하는) 칼 이미지를 생성합니다.
+def create_base_knife():
+    w, h = 18, 55
+    surf = pygame.Surface((w, h), pygame.SRCALPHA)
+    x, y = 0, 0
+    pygame.draw.rect(surf, BROWN_HANDLE, (x + w*0.3, y + h*0.7, w*0.4, h*0.3))
+    pygame.draw.rect(surf, GRAY_HILT, (x, y + h*0.6, w, h*0.1))
+    blade_points = [(x + w*0.1, y + h*0.6), (x + w*0.9, y + h*0.6), (x + w/2, y)]
+    pygame.draw.polygon(surf, GRAY_BLADE, blade_points)
+    blood_points = [(x + w*0.25, y + h*0.35), (x + w*0.75, y + h*0.35), (x + w/2, y)]
+    pygame.draw.polygon(surf, BLOOD_RED, blood_points)
+    pygame.draw.rect(surf, BLOOD_RED, (x + w*0.45, y + h*0.3, w*0.1, h*0.25))
+    return surf
+
+BASE_KNIFE_IMG = create_base_knife()
+
 # --- 전투 박스 (아레나) 설정 ---
 ARENA_W, ARENA_H = 250, 250 
 ARENA_X = (WIDTH - ARENA_W) // 2
 ARENA_Y = (HEIGHT - ARENA_H) // 2
 arena_rect = pygame.Rect(ARENA_X, ARENA_Y, ARENA_W, ARENA_H)
 
-# 메뉴 진입 시 사용될 넓은 텍스트 박스
 MENU_BOX_RECT = pygame.Rect(50, HEIGHT - 350, WIDTH - 100, 200)
 BORDER_THICKNESS = 5 
 
-# 플레이어 크기
 PLAYER_W, PLAYER_H = 20, 20 
 
 # --- 메뉴 버튼 설정 ---
@@ -68,45 +84,25 @@ for i in range(3):
     bx = button_gap + i * (button_w + button_gap)
     button_rects.append(pygame.Rect(bx, button_y, button_w, button_h))
 
-# 공격 패턴의 칼 그리기 함수
-def draw_realistic_knife(surf, rect, direction):
-    x, y, w, h = rect.x, rect.y, rect.width, rect.height
-    
-    if direction == 'down': 
-        pygame.draw.rect(surf, BROWN_HANDLE, (x + w*0.3, y, w*0.4, h*0.3))
-        pygame.draw.rect(surf, GRAY_HILT, (x, y + h*0.3, w, h*0.1))
-        blade_points = [(x + w*0.1, y + h*0.4), (x + w*0.9, y + h*0.4), (x + w/2, y + h)]
-        pygame.draw.polygon(surf, GRAY_BLADE, blade_points)
-        blood_points = [(x + w*0.25, y + h*0.65), (x + w*0.75, y + h*0.65), (x + w/2, y + h)]
-        pygame.draw.polygon(surf, BLOOD_RED, blood_points)
-        pygame.draw.rect(surf, BLOOD_RED, (x + w*0.45, y + h*0.45, w*0.1, h*0.25))
-        
-    elif direction == 'up': 
-        pygame.draw.rect(surf, BROWN_HANDLE, (x + w*0.3, y + h*0.7, w*0.4, h*0.3))
-        pygame.draw.rect(surf, GRAY_HILT, (x, y + h*0.6, w, h*0.1))
-        blade_points = [(x + w*0.1, y + h*0.6), (x + w*0.9, y + h*0.6), (x + w/2, y)]
-        pygame.draw.polygon(surf, GRAY_BLADE, blade_points)
-        blood_points = [(x + w*0.25, y + h*0.35), (x + w*0.75, y + h*0.35), (x + w/2, y)]
-        pygame.draw.polygon(surf, BLOOD_RED, blood_points)
-        pygame.draw.rect(surf, BLOOD_RED, (x + w*0.45, y + h*0.3, w*0.1, h*0.25))
+# 공격 패턴의 칼 그리기 함수 (회전 기능 추가)
+def draw_realistic_knife(surf, rect, direction, alpha=255):
+    # direction이 문자열이면 기본 각도로 매핑, 숫자(float/int)면 직접 각도로 사용
+    angle = 0
+    if direction == 'up': angle = 0
+    elif direction == 'down': angle = 180
+    elif direction == 'left': angle = 90
+    elif direction == 'right': angle = -90
+    elif isinstance(direction, (int, float)): angle = direction
 
-    elif direction == 'right': 
-        pygame.draw.rect(surf, BROWN_HANDLE, (x, y + h*0.3, w*0.3, h*0.4))
-        pygame.draw.rect(surf, GRAY_HILT, (x + w*0.3, y, w*0.1, h))
-        blade_points = [(x + w*0.4, y + h*0.1), (x + w*0.4, y + h*0.9), (x + w, y + h/2)]
-        pygame.draw.polygon(surf, GRAY_BLADE, blade_points)
-        blood_points = [(x + w*0.65, y + h*0.25), (x + w*0.65, y + h*0.75), (x + w, y + h/2)]
-        pygame.draw.polygon(surf, BLOOD_RED, blood_points)
-        pygame.draw.rect(surf, BLOOD_RED, (x + w*0.45, y + h*0.45, w*0.25, h*0.1))
+    img = BASE_KNIFE_IMG.copy()
+    if alpha < 255:
+        img.set_alpha(alpha)
 
-    elif direction == 'left': 
-        pygame.draw.rect(surf, BROWN_HANDLE, (x + w*0.7, y + h*0.3, w*0.3, h*0.4))
-        pygame.draw.rect(surf, GRAY_HILT, (x + w*0.6, y, w*0.1, h))
-        blade_points = [(x + w*0.6, y + h*0.1), (x + w*0.6, y + h*0.9), (x, y + h/2)]
-        pygame.draw.polygon(surf, GRAY_BLADE, blade_points)
-        blood_points = [(x + w*0.35, y + h*0.25), (x + w*0.35, y + h*0.75), (x, y + h/2)]
-        pygame.draw.polygon(surf, BLOOD_RED, blood_points)
-        pygame.draw.rect(surf, BLOOD_RED, (x + w*0.3, y + h*0.45, w*0.25, h*0.1))
+    # 지정된 각도만큼 이미지 회전
+    rotated_img = pygame.transform.rotate(img, angle)
+    # 기존 rect의 중앙을 기준으로 회전된 이미지 위치 재조정
+    new_rect = rotated_img.get_rect(center=rect.center)
+    surf.blit(rotated_img, new_rect.topleft)
 
 # --- 귀여운 캐릭터 그리기 함수 ---
 def draw_cute_girl(surf, cx, cy, is_happy=False, is_dead=False, is_hurt=False):
@@ -127,8 +123,10 @@ def draw_cute_girl(surf, cx, cy, is_happy=False, is_dead=False, is_hurt=False):
     pygame.draw.line(surf, skin, (cx + 25, cy + 40), (cx + 55, cy + 80), 10)
 
     kw, kh = 18, 55 
-    left_knife_rect = pygame.Rect(cx - 55 - kw//2, cy + 30, kw, kh)
-    right_knife_rect = pygame.Rect(cx + 55 - kw//2, cy + 30, kw, kh)
+    left_knife_rect = pygame.Rect(0, 0, kw, kh)
+    left_knife_rect.center = (cx - 55, cy + 50)
+    right_knife_rect = pygame.Rect(0, 0, kw, kh)
+    right_knife_rect.center = (cx + 55, cy + 50)
 
     draw_realistic_knife(surf, left_knife_rect, 'up')
     draw_realistic_knife(surf, right_knife_rect, 'up')
@@ -166,7 +164,6 @@ def draw_cute_girl(surf, cx, cy, is_happy=False, is_dead=False, is_hurt=False):
         pygame.draw.polygon(surf, RED, [(cx, cy + 45), (cx + 20, cy + 35), (cx + 20, cy + 55)])
         pygame.draw.circle(surf, YELLOW, (cx, cy + 45), 6)
 
-# 특정 방향(side_override)을 지정해 칼을 스폰할 수 있도록 수정
 def spawn_knife(side_override=None):
     side = side_override if side_override is not None else random.randint(0, 3)
     speed = random.randint(7, 12) 
@@ -177,26 +174,25 @@ def spawn_knife(side_override=None):
     if side == 0:
         x = random.randint(arena_rect.left, arena_rect.right - K_SHORT)
         y = -100
-        return pygame.Rect(x, y, K_SHORT, K_LONG), 0, speed, 'down'
+        return pygame.Rect(x, y, K_SHORT, K_LONG), 0, speed, 'down', 0
     elif side == 1: 
         x = random.randint(arena_rect.left, arena_rect.right - K_SHORT)
         y = HEIGHT + 100
-        return pygame.Rect(x, y, K_SHORT, K_LONG), 0, -speed, 'up'
+        return pygame.Rect(x, y, K_SHORT, K_LONG), 0, -speed, 'up', 0
     elif side == 2: 
         x = -100
         y = random.randint(arena_rect.top, arena_rect.bottom - K_SHORT)
-        return pygame.Rect(x, y, K_LONG, K_SHORT), speed, 0, 'right'
+        return pygame.Rect(x, y, K_LONG, K_SHORT), speed, 0, 'right', 0
     else: 
         x = WIDTH + 100
         y = random.randint(arena_rect.top, arena_rect.bottom - K_SHORT)
-        return pygame.Rect(x, y, K_LONG, K_SHORT), -speed, 0, 'left'
+        return pygame.Rect(x, y, K_LONG, K_SHORT), -speed, 0, 'left', 0
 
-# --- 수정된 게임 오버 화면 함수 ---
 def game_over_screen():
     screen.fill(BLACK)
     text1 = font_big.render("GAME OVER", True, RED)
     text2 = font.render("다시 시작 'R'", True, WHITE)
-    text3 = font.render("종료 'Q'", True, GRAY) # 종료 안내 추가
+    text3 = font.render("종료 'Q'", True, GRAY)
     
     screen.blit(text1, (WIDTH // 2 - text1.get_width() // 2, HEIGHT // 2 - 80))
     screen.blit(text2, (WIDTH // 2 - text2.get_width() // 2, HEIGHT // 2 + 10))
@@ -211,7 +207,7 @@ def game_over_screen():
             if e.type == pygame.KEYDOWN:
                 if e.key == pygame.K_r: 
                     return
-                if e.key == pygame.K_q: # Q를 눌러 종료하는 로직 추가
+                if e.key == pygame.K_q:
                     pygame.quit()
                     sys.exit()
 
@@ -234,6 +230,9 @@ def main():
     current_pattern = 1
     pattern_timer = 0
     spawn_timer = 0
+    
+    # 패턴 2에서 십자/대각선을 번갈아 스폰하기 위한 변수
+    pattern2_mode = "cross" 
     
     shake_timer = 0
     enemy_hit_timer = 0
@@ -287,8 +286,7 @@ def main():
                             knives.clear()
                             
                             current_pattern += 1
-                            if current_pattern > 8:
-                                current_pattern = 1
+                            if current_pattern > 8: current_pattern = 1
                             
                 elif game_state == "LOVE_WAIT":
                     if e.key == pygame.K_z or e.key == pygame.K_RETURN:
@@ -308,8 +306,7 @@ def main():
                             knives.clear()
                             
                             current_pattern += 1
-                            if current_pattern > 8:
-                                current_pattern = 1
+                            if current_pattern > 8: current_pattern = 1
                             
                 elif game_state == "HEAL_WAIT":
                     if e.key == pygame.K_z or e.key == pygame.K_RETURN:
@@ -326,8 +323,7 @@ def main():
                         knives.clear()
                         
                         current_pattern += 1
-                        if current_pattern > 8:
-                            current_pattern = 1
+                        if current_pattern > 8: current_pattern = 1
                         
                 elif game_state in ["TRUE_ENDING", "BAD_ENDING"]:
                     if e.key == pygame.K_r: 
@@ -354,52 +350,58 @@ def main():
             spawn_timer += 1
 
             # ================= [공격 패턴 구현 구간] =================
-            if current_pattern == 1: # 무작위 사방
+            if current_pattern == 1: 
                 if spawn_timer >= 18:
                     spawn_timer = 0
-                    rect, dx, dy, direction = spawn_knife()
-                    knives.append([rect, dx, dy, direction])
+                    rect, dx, dy, direction, delay = spawn_knife()
+                    knives.append([rect, dx, dy, direction, delay])
                     
-            elif current_pattern == 2: # 유튜브 2:40~2:48 (언다인 창 패턴: 플레이어를 둘러싸고 좁혀옴)
-                if spawn_timer >= 35: # 35프레임마다 생성 (약 0.6초)
+            elif current_pattern == 2:
+                if spawn_timer >= 50:
                     spawn_timer = 0
-                    speed = 7
-                    dist = 220 # 플레이어의 현재 위치에서 220만큼 떨어진 곳(아레나 바깥)에서 생성
-                    K_LONG = 55
-                    K_SHORT = 18
-                    
-                    # 칼들이 생성될 시점의 플레이어 위치 기록 (이 위치로 칼들이 모여듦)
+                    speed = 18
+                    dist = 220 
+                    delay_frames = 40 
                     px = player.centerx
                     py = player.centery
+
+                    # 십자와 대각선 번갈아 스폰하기
+                    if pattern2_mode == "cross":
+                        angles = [0, 90, 180, 270] # (우, 상, 좌, 하)
+                        pattern2_mode = "diagonal"
+                    else:
+                        angles = [45, 135, 225, 315] # (우상, 좌상, 좌하, 우하)
+                        pattern2_mode = "cross"
+
+                    for ang in angles:
+                        rad = math.radians(ang)
+                        
+                        # 삼각함수를 활용해 스폰 위치 지정 (플레이어 중심)
+                        sx = px + math.cos(rad) * dist
+                        sy = py - math.sin(rad) * dist # Pygame은 Y축이 아래로 증가하므로 마이너스
+                        
+                        # 플레이어를 향해 날아갈 방향 벡터 (스폰 반대 방향)
+                        dx = -math.cos(rad) * speed
+                        dy = math.sin(rad) * speed
+                        
+                        # 캐릭터를 바라보는 각도 계산 (atan2 활용)
+                        # -dy, -dx를 넣어 목표 방향을 계산
+                        face_angle = math.degrees(math.atan2(-dx, -dy))
+                        
+                        # 대각선에서도 공정한 피격 판정을 위해 정사각형 히트박스 생성
+                        rect = pygame.Rect(0, 0, 18, 18)
+                        rect.center = (int(sx), int(sy))
+                        
+                        # 대각선의 정밀한 이동을 위해 소수점 좌표(sx, sy) 추가 저장
+                        # 구조: [rect, dx, dy, 방향(각도), 딜레이, float_X, float_Y]
+                        knives.append([rect, dx, dy, face_angle, delay_frames, sx, sy])
                     
-                    # 위에서 아래로 날아오는 칼
-                    r1 = pygame.Rect(px - K_SHORT//2, py - dist, K_SHORT, K_LONG)
-                    knives.append([r1, 0, speed, 'down'])
-                    
-                    # 아래에서 위로 날아오는 칼
-                    r2 = pygame.Rect(px - K_SHORT//2, py + dist, K_SHORT, K_LONG)
-                    knives.append([r2, 0, -speed, 'up'])
-                    
-                    # 왼쪽에서 오른쪽으로 날아오는 칼
-                    r3 = pygame.Rect(px - dist, py - K_SHORT//2, K_LONG, K_SHORT)
-                    knives.append([r3, speed, 0, 'right'])
-                    
-                    # 오른쪽에서 왼쪽으로 날아오는 칼
-                    r4 = pygame.Rect(px + dist, py - K_SHORT//2, K_LONG, K_SHORT)
-                    knives.append([r4, -speed, 0, 'left'])
-                    
-            elif current_pattern == 3:
-                pass # 여기에 3번 패턴 코드 작성
-            elif current_pattern == 4:
-                pass # 여기에 4번 패턴 코드 작성
-            elif current_pattern == 5:
-                pass # 여기에 5번 패턴 코드 작성
-            elif current_pattern == 6:
-                pass # 여기에 6번 패턴 코드 작성
-            elif current_pattern == 7:
-                pass # 여기에 7번 패턴 코드 작성
-            elif current_pattern == 8:
-                pass # 여기에 8번 패턴 코드 작성
+            elif current_pattern == 3: pass
+            elif current_pattern == 4: pass
+            elif current_pattern == 5: pass
+            elif current_pattern == 6: pass
+            elif current_pattern == 7: pass
+            elif current_pattern == 8: pass
             # =========================================================
 
             if pattern_timer >= 600:
@@ -426,14 +428,28 @@ def main():
         survived_knives = []
         for knife in knives:
             rect, dx, dy, direction = knife[0], knife[1], knife[2], knife[3]
-            rect.x += dx
-            rect.y += dy
+            delay = knife[4] if len(knife) > 4 else 0
+            is_active = True
+            
+            if delay > 0:
+                knife[4] -= 1
+                is_active = False # 대기 상태일 때는 움직이거나 충돌하지 않음
+            else:
+                # 대각선 이동 시 소수점 오차로 궤도가 틀어지는 것을 방지 (float 이동 좌표 적용)
+                if len(knife) > 5:
+                    knife[5] += dx # float X
+                    knife[6] += dy # float Y
+                    rect.centerx = int(knife[5])
+                    rect.centery = int(knife[6])
+                else:
+                    rect.x += dx
+                    rect.y += dy
             
             knife_hitbox = rect 
             
-            if game_state == "DODGE" and invincible == 0 and player_hitbox.colliderect(knife_hitbox):
+            if game_state == "DODGE" and invincible == 0 and is_active and player_hitbox.colliderect(knife_hitbox):
                 lives -= 1
-                invincible = 90
+                invincible = 45
                 shake_timer = 6  
                 
                 if lives <= 0:
@@ -451,7 +467,13 @@ def main():
         if game_state == "DODGE":
             pygame.draw.rect(canvas, WHITE, arena_rect, BORDER_THICKNESS)
             for knife in knives:
-                draw_realistic_knife(canvas, knife[0], knife[3])
+                delay = knife[4] if len(knife) > 4 else 0
+                if delay > 0:
+                    blink_speed = 2 if delay < 15 else 5
+                    if (delay // blink_speed) % 2 == 0:
+                        draw_realistic_knife(canvas, knife[0], knife[3], 255)
+                else:
+                    draw_realistic_knife(canvas, knife[0], knife[3], 255)
                 
             if invincible == 0 or (invincible // 5) % 2 == 0:
                 pygame.draw.rect(canvas, RED, player)
