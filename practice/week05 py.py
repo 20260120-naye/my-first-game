@@ -287,7 +287,7 @@ def main():
                             knives.clear()
                             
                             current_pattern += 1
-                            if current_pattern > 8: current_pattern = 1
+                            if current_pattern > 7: current_pattern = 1
                             
                 elif game_state == "LOVE_WAIT":
                     if e.key == pygame.K_z or e.key == pygame.K_RETURN:
@@ -307,7 +307,7 @@ def main():
                             knives.clear()
                             
                             current_pattern += 1
-                            if current_pattern > 8: current_pattern = 1
+                            if current_pattern > 7: current_pattern = 1
                             
                 elif game_state == "HEAL_WAIT":
                     if e.key == pygame.K_z or e.key == pygame.K_RETURN:
@@ -324,7 +324,7 @@ def main():
                         knives.clear()
                         
                         current_pattern += 1
-                        if current_pattern > 8: current_pattern = 1
+                        if current_pattern > 7: current_pattern = 1
                         
                 elif game_state in ["TRUE_ENDING", "BAD_ENDING"]:
                     if e.key == pygame.K_r: 
