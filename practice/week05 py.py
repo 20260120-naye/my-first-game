@@ -494,7 +494,7 @@ def main():
                         
                         knives.append([rect, dx, dy, face_angle, delay_frames, sx, sy, alpha, life_timer])
                         
-            elif current_pattern == 6: 
+            #elif current_pattern == 6: 
                 # === [패턴 6: 튕기는 부메랑 칼날] ===
                 if spawn_timer >= 45:
                     spawn_timer = 0
@@ -526,7 +526,59 @@ def main():
                     has_entered = False   # 아레나 내부에 진입했는지 여부
                     
                     knives.append([rect, dx, dy, face_angle, delay_frames, sx, sy, alpha, life_timer, bounces_left, is_bounce, has_entered])
-            elif current_pattern == 7: pass
+            #elif current_pattern == 7:
+                # 1번째 경고 -> 1번째 찌름 & 2번째 경고 -> 2번째 찌름 & 3번째 경고 리듬 패턴
+                
+                # 패턴 상태를 기억하기 위한 변수 초기화
+                if 'p7_lanes' not in globals():
+                    global p7_lanes
+                    p7_lanes = [0, 1, 2]
+                    random.shuffle(p7_lanes)
+                
+                # 아직 공격하지 않은 구역이 남아 있다면
+                if len(p7_lanes) > 0:
+                    # ★ 생성 간격을 25프레임으로 설정
+                    if spawn_timer >= 25: 
+                        spawn_timer = 0
+                        
+                        lane_idx = p7_lanes.pop(0) 
+                        
+                        lane_width = arena_rect.width // 3
+                        lane_start_x = arena_rect.left + (lane_width * lane_idx) + 5
+                        
+                        knife_w = 18
+                        knife_h = 150
+                        num_knives = (lane_width - 10) // knife_w 
+                        
+                        dx = 0
+                        dy = -12 # 찌르는 속도
+                        
+                        # ★ 대기 시간(경고)을 생성 간격과 똑같이 25프레임으로 맞춤!
+                        delay_frames = 25 
+                        face_angle = math.degrees(math.atan2(-dx, -dy))
+                        
+                        for j in range(num_knives):
+                            sx = lane_start_x + (j * knife_w) + (knife_w // 2)
+                            
+                            # 바닥에서 칼끝만 20픽셀 튀어나옴
+                            sy = arena_rect.bottom + (knife_h // 2) - 20
+                            
+                            rect = pygame.Rect(0, 0, knife_w, knife_h)
+                            rect.center = (int(sx), int(sy))
+                            
+                            alpha = 255
+                            life_timer = 0
+                            
+                            knives.append([rect, dx, dy, face_angle, delay_frames, sx, sy, alpha, life_timer])
+                            
+                # 3개의 구역 공격이 모두 끝났다면
+                else:
+                    # 마지막 칼이 완전히 지나갈 수 있도록 15프레임(약 0.25초 살짝 넘게) 여유를 줌
+                    if spawn_timer >= 15:
+                        spawn_timer = 0
+                        # 구역을 다시 채우고 섞어서 다음 세트 준비
+                        p7_lanes = [0, 1, 2]
+                        random.shuffle(p7_lanes)
             elif current_pattern == 8: pass
             # =========================================================
 
