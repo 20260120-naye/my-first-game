@@ -1,3 +1,4 @@
+
 import pygame
 import random
 import sys
@@ -356,7 +357,7 @@ def main():
                     rect, dx, dy, direction, delay = spawn_knife()
                     knives.append([rect, dx, dy, direction, delay])
                     
-            #elif current_pattern == 2:
+            elif current_pattern == 2:
                 if spawn_timer >= 50:
                     spawn_timer = 0
                     speed = 18
@@ -388,7 +389,7 @@ def main():
                         
                         knives.append([rect, dx, dy, face_angle, delay_frames, sx, sy])
                     
-            #elif current_pattern == 3: 
+            elif current_pattern == 3: 
                 if spawn_timer >= 40: 
                     spawn_timer = 0
                     speed = 6 
@@ -416,7 +417,7 @@ def main():
                         
                         knives.append([rect, dx, dy, face_angle, delay_frames, sx, sy])
             
-            #elif current_pattern == 4:
+            elif current_pattern == 4:
                 # 유튜브 3:34~3:41 구간 - 육각형 포위망 조여오기 패턴
                 current_spawn_rate = 60
                 
@@ -451,7 +452,7 @@ def main():
                         
                         knives.append([rect, dx, dy, face_angle, delay_frames, sx, sy, alpha, life_timer])
 
-            #elif current_pattern == 5:
+            elif current_pattern == 5:
                 # 유튜브 2:47~2:51 - 아스고어 조여오는 원형 패턴 (빈틈 뚫린 포위망)
                 if spawn_timer >= 45: 
                     spawn_timer = 0
@@ -494,7 +495,7 @@ def main():
                         
                         knives.append([rect, dx, dy, face_angle, delay_frames, sx, sy, alpha, life_timer])
                         
-            #elif current_pattern == 6: 
+            elif current_pattern == 6: 
                 # === [패턴 6: 튕기는 부메랑 칼날] ===
                 if spawn_timer >= 45:
                     spawn_timer = 0
@@ -526,7 +527,7 @@ def main():
                     has_entered = False   # 아레나 내부에 진입했는지 여부
                     
                     knives.append([rect, dx, dy, face_angle, delay_frames, sx, sy, alpha, life_timer, bounces_left, is_bounce, has_entered])
-            #elif current_pattern == 7:
+            elif current_pattern == 7:
                 # 1번째 경고 -> 1번째 찌름 & 2번째 경고 -> 2번째 찌름 & 3번째 경고 리듬 패턴
                 
                 # 패턴 상태를 기억하기 위한 변수 초기화
@@ -579,7 +580,6 @@ def main():
                         # 구역을 다시 채우고 섞어서 다음 세트 준비
                         p7_lanes = [0, 1, 2]
                         random.shuffle(p7_lanes)
-            elif current_pattern == 8: pass
             # =========================================================
 
             if pattern_timer >= 600:
