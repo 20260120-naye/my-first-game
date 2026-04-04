@@ -356,7 +356,7 @@ def main():
                     rect, dx, dy, direction, delay = spawn_knife()
                     knives.append([rect, dx, dy, direction, delay])
                     
-           # elif current_pattern == 2:
+            #elif current_pattern == 2:
                 if spawn_timer >= 50:
                     spawn_timer = 0
                     speed = 18
@@ -388,7 +388,7 @@ def main():
                         
                         knives.append([rect, dx, dy, face_angle, delay_frames, sx, sy])
                     
-           # elif current_pattern == 3: 
+            #elif current_pattern == 3: 
                 if spawn_timer >= 40: 
                     spawn_timer = 0
                     speed = 6 
@@ -416,7 +416,7 @@ def main():
                         
                         knives.append([rect, dx, dy, face_angle, delay_frames, sx, sy])
             
-            # elif current_pattern == 4:
+            #elif current_pattern == 4:
                 # 유튜브 3:34~3:41 구간 - 육각형 포위망 조여오기 패턴
                 current_spawn_rate = 60
                 
@@ -451,7 +451,7 @@ def main():
                         
                         knives.append([rect, dx, dy, face_angle, delay_frames, sx, sy, alpha, life_timer])
 
-            elif current_pattern == 5:
+            #elif current_pattern == 5:
                 # 유튜브 2:47~2:51 - 아스고어 조여오는 원형 패턴 (빈틈 뚫린 포위망)
                 if spawn_timer >= 45: 
                     spawn_timer = 0
