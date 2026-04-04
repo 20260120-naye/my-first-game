@@ -494,7 +494,38 @@ def main():
                         
                         knives.append([rect, dx, dy, face_angle, delay_frames, sx, sy, alpha, life_timer])
                         
-            elif current_pattern == 6: pass
+            elif current_pattern == 6: 
+                # === [패턴 6: 튕기는 부메랑 칼날] ===
+                if spawn_timer >= 45:
+                    spawn_timer = 0
+                    speed = 7
+                    delay_frames = 10
+                    
+                    # 4방향 중 한 곳에서 스폰
+                    side = random.choice(["top", "bottom", "left", "right"])
+                    if side in ["top", "bottom"]:
+                        sx = random.randint(arena_rect.left, arena_rect.right)
+                        sy = arena_rect.top - 30 if side == "top" else arena_rect.bottom + 30
+                    else:
+                        sx = arena_rect.left - 30 if side == "left" else arena_rect.right + 30
+                        sy = random.randint(arena_rect.top, arena_rect.bottom)
+                        
+                    # 플레이어를 조준
+                    angle = math.atan2(player.centery - sy, player.centerx - sx)
+                    dx = math.cos(angle) * speed
+                    dy = math.sin(angle) * speed
+                    face_angle = math.degrees(math.atan2(-dx, -dy))
+                    
+                    rect = pygame.Rect(0, 0, 18, 18)
+                    rect.center = (int(sx), int(sy))
+                    
+                    alpha = 255
+                    life_timer = 0
+                    bounces_left = 1      # 튕길 횟수 (1번)
+                    is_bounce = True      # 튕기는 패턴 여부
+                    has_entered = False   # 아레나 내부에 진입했는지 여부
+                    
+                    knives.append([rect, dx, dy, face_angle, delay_frames, sx, sy, alpha, life_timer, bounces_left, is_bounce, has_entered])
             elif current_pattern == 7: pass
             elif current_pattern == 8: pass
             # =========================================================
@@ -530,6 +561,26 @@ def main():
                 knife[4] -= 1
                 is_active = False 
             else:
+                # === [패턴 6 충돌 및 반사 물리 로직 추가] ===
+                if len(knife) > 11 and knife[10]: # is_bounce
+                    # 1. 아레나 내부에 진입했는지 확인
+                    if not knife[11] and arena_rect.inflate(-10, -10).contains(rect):
+                        knife[11] = True 
+                    
+                    # 2. 진입한 적이 있고, 튕길 횟수가 남아있다면 벽 충돌 검사
+                    if knife[11] and knife[9] > 0:
+                        bounced = False
+                        if rect.left <= arena_rect.left or rect.right >= arena_rect.right:
+                            knife[1] *= -1 # x축 방향 반전
+                            bounced = True
+                        elif rect.top <= arena_rect.top or rect.bottom >= arena_rect.bottom:
+                            knife[2] *= -1 # y축 방향 반전
+                            bounced = True
+                            
+                        if bounced:
+                            knife[9] -= 1 # 튕김 횟수 차감
+                            knife[3] = math.degrees(math.atan2(-knife[1], -knife[2])) # 그래픽 회전 각도 재계산
+                            dx, dy = knife[1], knife[2] # 바뀐 방향을 이번 프레임 이동에 즉시 적용
                 if len(knife) > 5:
                     knife[5] += dx 
                     knife[6] += dy 
