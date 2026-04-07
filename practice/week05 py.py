@@ -191,7 +191,7 @@ def spawn_knife(side_override=None):
 
 def game_over_screen():
     screen.fill(BLACK)
-    text1 = font_big.render("GAME OVER", True, RED)
+    text1 = font_big.render("살해 당했습니다..", True, RED)
     text2 = font.render("다시 시작 'R'", True, WHITE)
     text3 = font.render("종료 'Q'", True, GRAY)
     
@@ -286,8 +286,8 @@ def main():
                             player.centerx, player.centery = arena_rect.centerx, arena_rect.centery
                             knives.clear()
                             
-                            current_pattern += 1
-                            if current_pattern > 7: current_pattern = 1
+                            # 이전에 나온 패턴을 제외하고 2~7번 패턴 중 하나를 랜덤으로 선택
+                            current_pattern = random.choice([p for p in range(2, 8) if p != current_pattern])
                             
                 elif game_state == "LOVE_WAIT":
                     if e.key == pygame.K_z or e.key == pygame.K_RETURN:
@@ -306,8 +306,8 @@ def main():
                             player.centerx, player.centery = arena_rect.centerx, arena_rect.centery
                             knives.clear()
                             
-                            current_pattern += 1
-                            if current_pattern > 7: current_pattern = 1
+                            # 이전에 나온 패턴을 제외하고 2~7번 패턴 중 하나를 랜덤으로 선택
+                            current_pattern = random.choice([p for p in range(2, 8) if p != current_pattern])
                             
                 elif game_state == "HEAL_WAIT":
                     if e.key == pygame.K_z or e.key == pygame.K_RETURN:
@@ -323,8 +323,8 @@ def main():
                         player.centerx, player.centery = arena_rect.centerx, arena_rect.centery
                         knives.clear()
                         
-                        current_pattern += 1
-                        if current_pattern > 7: current_pattern = 1
+                        # 이전에 나온 패턴을 제외하고 2~7번 패턴 중 하나를 랜덤으로 선택
+                        current_pattern = random.choice([p for p in range(2, 8) if p != current_pattern])
                         
                 elif game_state in ["TRUE_ENDING", "BAD_ENDING"]:
                     if e.key == pygame.K_r: 
@@ -418,7 +418,7 @@ def main():
                         knives.append([rect, dx, dy, face_angle, delay_frames, sx, sy])
             
             elif current_pattern == 4:
-                # 유튜브 3:34~3:41 구간 - 육각형 포위망 조여오기 패턴
+                # 육각형 포위망 조여오기 패턴
                 current_spawn_rate = 60
                 
                 if spawn_timer >= current_spawn_rate:
@@ -453,7 +453,7 @@ def main():
                         knives.append([rect, dx, dy, face_angle, delay_frames, sx, sy, alpha, life_timer])
 
             elif current_pattern == 5:
-                # 유튜브 2:47~2:51 - 아스고어 조여오는 원형 패턴 (빈틈 뚫린 포위망)
+                # 아스고어 조여오는 원형 패턴 (빈틈 뚫린 포위망)
                 if spawn_timer >= 45: 
                     spawn_timer = 0
                     speed = 6  
@@ -538,7 +538,6 @@ def main():
                 
                 # 아직 공격하지 않은 구역이 남아 있다면
                 if len(p7_lanes) > 0:
-                    # ★ 생성 간격을 25프레임으로 설정
                     if spawn_timer >= 25: 
                         spawn_timer = 0
                         
@@ -554,7 +553,6 @@ def main():
                         dx = 0
                         dy = -12 # 찌르는 속도
                         
-                        # ★ 대기 시간(경고)을 생성 간격과 똑같이 25프레임으로 맞춤!
                         delay_frames = 25 
                         face_angle = math.degrees(math.atan2(-dx, -dy))
                         
@@ -630,7 +628,7 @@ def main():
                             bounced = True
                             
                         if bounced:
-                            knife[9] -= 1 # 튕김 횟수 차감
+                            knife[9] -= 1 # 튕김 횟 차감
                             knife[3] = math.degrees(math.atan2(-knife[1], -knife[2])) # 그래픽 회전 각도 재계산
                             dx, dy = knife[1], knife[2] # 바뀐 방향을 이번 프레임 이동에 즉시 적용
                 if len(knife) > 5:
@@ -696,9 +694,6 @@ def main():
                 
             if invincible == 0 or (invincible // 5) % 2 == 0:
                 pygame.draw.rect(canvas, RED, player)
-                
-            pattern_text = font_small.render(f"패턴 {current_pattern}", True, GRAY)
-            canvas.blit(pattern_text, (arena_rect.x, arena_rect.y - 30))
                 
         elif game_state in ["MENU", "HEAL_WAIT", "HEAL_SPIN", "HEAL_RESULT", "LOVE_WAIT", "LOVE_RESULT", "ATTACK_WAIT", "ATTACK_RESULT"]:
             draw_x = WIDTH // 2
