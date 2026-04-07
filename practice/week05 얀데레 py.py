@@ -189,18 +189,49 @@ def spawn_knife(side_override=None):
         y = random.randint(arena_rect.top, arena_rect.bottom - K_SHORT)
         return pygame.Rect(x, y, K_LONG, K_SHORT), -speed, 0, 'left', 0
 
-def game_over_screen():
-    screen.fill(BLACK)
-    text1 = font_big.render("살해 당했습니다..", True, RED)
-    text2 = font.render("다시 시작 'R'", True, WHITE)
-    text3 = font.render("종료 'Q'", True, GRAY)
+def game_over_screen(player_rect):
+    # 1. 시퀀스 시작: 화면 전체 암전 (플레이어 위치만 기억)
+    alpha = 255
+    fade_speed = 2 # 숫자가 높을수록 빨리 사라집니다.
     
-    screen.blit(text1, (WIDTH // 2 - text1.get_width() // 2, HEIGHT // 2 - 80))
-    screen.blit(text2, (WIDTH // 2 - text2.get_width() // 2, HEIGHT // 2 + 10))
-    screen.blit(text3, (WIDTH // 2 - text3.get_width() // 2, HEIGHT // 2 + 70))
-    pygame.display.flip()
+    # 페이드 아웃 루프
+    while alpha > 0:
+        for e in pygame.event.get():
+            if e.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+        
+        # 전체 검정 배경
+        screen.fill(BLACK)
+        
+        # 투명도를 지원하는 임시 Surface 생성 (플레이어 크기)
+        temp_player_surf = pygame.Surface((PLAYER_W, PLAYER_H), pygame.SRCALPHA)
+        # 현재 alpha 값을 적용한 빨간색으로 채우기 (R, G, B, A)
+        temp_player_surf.fill((255, 0, 0, alpha))
+        
+        # 플레이어가 있던 자리에 그리기
+        screen.blit(temp_player_surf, player_rect.topleft)
+        
+        pygame.display.flip()
+        
+        alpha -= fade_speed
+        clock.tick(FPS)
     
+    # 완전히 사라진 후 잠시 정적 (0.5초)
+    pygame.time.delay(500)
+
+    # 2. 기존의 메시지 출력 로직
     while True:
+        screen.fill(BLACK)
+        text1 = font_big.render("살해 당했습니다..", True, RED)
+        text2 = font.render("다시 시작 'R'", True, WHITE)
+        text3 = font.render("종료 'Q'", True, GRAY)
+        
+        screen.blit(text1, (WIDTH // 2 - text1.get_width() // 2, HEIGHT // 2 - 80))
+        screen.blit(text2, (WIDTH // 2 - text2.get_width() // 2, HEIGHT // 2 + 10))
+        screen.blit(text3, (WIDTH // 2 - text3.get_width() // 2, HEIGHT // 2 + 70))
+        pygame.display.flip()
+        
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
                 pygame.quit()
@@ -392,7 +423,7 @@ def main():
             elif current_pattern == 3: 
                 if spawn_timer >= 40: 
                     spawn_timer = 0
-                    speed = 6 
+                    speed = 5 
                     K_LONG = 55
                     K_SHORT = 18
                     delay_frames = 30 
@@ -662,13 +693,15 @@ def main():
 
             knife_hitbox = rect 
             
+            # main 함수 내부의 충돌 처리 부분
             if game_state == "DODGE" and invincible == 0 and is_active and player_hitbox.colliderect(knife_hitbox):
                 lives -= 1
                 invincible = 45
                 shake_timer = 6  
                 
                 if lives <= 0:
-                    game_over_screen()
+                    # 'player' (Rect 객체)를 인자로 전달하여 해당 위치에서 페이드 아웃 시작
+                    game_over_screen(player) 
                     main() 
                     return
             
