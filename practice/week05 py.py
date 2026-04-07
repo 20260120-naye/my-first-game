@@ -244,10 +244,10 @@ def main():
     heal_amount = 0
 
     affection = 0 
-    max_affection = 3 
+    max_affection = 5 
     
-    yandere_hp = 3
-    max_yandere_hp = 3
+    yandere_hp = 5
+    max_yandere_hp = 5
 
     while True:
         clock.tick(FPS)
