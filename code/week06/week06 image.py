@@ -6,7 +6,7 @@ pygame.display.set_caption("Sprite Basics")
 clock = pygame.time.Clock()
 
 # ── ① 이미지 로드 ──────────────────────────────
-img = pygame.image.load("./code/week6/assets/images/player.jpg").convert_alpha()
+img = pygame.image.load("./code/week06/assets/images/player.jpg").convert_alpha()
 
 # ── ② 크기 조절 ────────────────────────────────
 img = pygame.transform.scale(img, (300, 300))
