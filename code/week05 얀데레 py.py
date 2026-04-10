@@ -64,7 +64,7 @@ def create_base_knife():
 BASE_KNIFE_IMG = create_base_knife()
 
 # --- 전투 박스 (아레나) 설정 ---
-ARENA_W, ARENA_H = 250, 250 
+ARENA_W, ARENA_H = 250, 250
 ARENA_X = (WIDTH - ARENA_W) // 2
 ARENA_Y = (HEIGHT - ARENA_H) // 2
 arena_rect = pygame.Rect(ARENA_X, ARENA_Y, ARENA_W, ARENA_H)
