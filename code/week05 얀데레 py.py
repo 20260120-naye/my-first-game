@@ -39,6 +39,9 @@ pygame.mixer.init() # 오디오 믹서 초기화
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Undertale Knife Pattern Upgrade")
 
+# 👉 [추가] 2초 뒤 피격음을 재생하기 위한 커스텀 이벤트 설정
+PLAY_HIT_SOUND = pygame.USEREVENT + 1 
+
 # ── 효과음 및 배경음악 로드 및 재생 ────────────────────────────
 hit_sound = None
 try:
@@ -88,8 +91,12 @@ def create_base_knife():
 BASE_KNIFE_IMG = create_base_knife()
 
 # --- 스프라이트 시트 로드 및 준비 ---
-sheet_bytes = base64.b64decode(SHEET_B64)
-player_sheet = pygame.image.load(io.BytesIO(sheet_bytes)).convert_alpha()
+try:
+    sheet_bytes = base64.b64decode(SHEET_B64)
+    player_sheet = pygame.image.load(io.BytesIO(sheet_bytes)).convert_alpha()
+except Exception as e:
+    print(f"이미지 로드 실패 (SHEET_B64를 제대로 입력했는지 확인하세요): {e}")
+    player_sheet = pygame.Surface((128, 128)) # 에러 방지용 더미 이미지
 
 player_frames = []
 for i in range(4):
@@ -161,16 +168,25 @@ def spawn_knife(side_override=None):
         y = random.randint(arena_rect.top, arena_rect.bottom - K_SHORT)
         return pygame.Rect(x, y, K_LONG, K_SHORT), -speed, 0, 'left', 0
 
+
+# 👉 게임오버 처리 화면
 def game_over_screen(player_rect):
+    global hit_sound
     alpha = 255
     fade_speed = 2
     
+    # 페이드 아웃 중에도 2초가 지날 수 있으므로 이벤트 루프 추가 확인
     while alpha > 0:
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
-        
+                
+            # 👉 [추가] 타이머 알람이 울리면 피격음 재생!
+            if e.type == PLAY_HIT_SOUND:
+                if hit_sound:
+                    hit_sound.play()
+                    
         screen.fill(BLACK)
         temp_player_surf = pygame.Surface((PLAYER_W, PLAYER_H), pygame.SRCALPHA)
         temp_player_surf.fill((255, 0, 0, alpha))
@@ -182,6 +198,7 @@ def game_over_screen(player_rect):
     
     pygame.time.delay(500)
 
+    # 본 게임오버 대기 화면
     while True:
         screen.fill(BLACK)
         text1 = font_big.render("살해 당했습니다..", True, RED)
@@ -197,6 +214,9 @@ def game_over_screen(player_rect):
             if e.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
+                
+            
+
             if e.type == pygame.KEYDOWN:
                 if e.key == pygame.K_r: 
                     return
@@ -585,26 +605,40 @@ def main():
 
             knife_hitbox = rect 
             
-            # --- 🎯 피격 판정 및 효과음 재생 ────────────────────────────
+            # --- 🎯 피격 판정 및 게임오버 처리 ────────────────────────────
             if game_state == "DODGE" and invincible == 0 and is_active and player_hitbox.colliderect(knife_hitbox):
-                if hit_sound:
-                    hit_sound.play() # 효과음 재생
-
+                
+                # 1. 일단 체력을 먼저 깎고 상태를 업데이트합니다.
                 lives -= 1
                 invincible = 45
                 shake_timer = 6  
                 
+                # 2. 체력이 0이 되었을 때 (죽었을 때)
                 if lives <= 0:
-                    pygame.mixer.music.stop() # 체력이 다 닳으면 배경음악 정지
+                    pygame.mixer.music.stop() # 배경음악 정지
                     pygame.mixer.music.set_volume(0.1) # 게임오버음 볼륨 조절
                     pygame.mixer.music.load("./code/week06/assets/sounds/게임오버음.mp3")
-                    pygame.mixer.music.play(1) # 게임오버음 로드
+                    pygame.mixer.music.play(1) # 게임오버음 즉시 재생
+                    
+                    # 2초 뒤에 피격음 알람 설정 (즉시 재생하지 않음)
+                    pygame.time.set_timer(PLAY_HIT_SOUND, 2000, 1)
+
+                    # 게임 오버 화면으로 진입
                     game_over_screen(player)
+                    
+                    # 재시작 시 안전을 위해 타이머 초기화 
+                    pygame.time.set_timer(PLAY_HIT_SOUND, 0)
+                    
                     pygame.mixer.music.load("./code/week06/assets/sounds/배경음.mp3")
                     pygame.mixer.music.set_volume(0.05)
-                    pygame.mixer.music.play(-1) # 재시작 시 배경음악 다시 재생
+                    pygame.mixer.music.play(-1) 
                     main() 
                     return
+                    
+                # 3. 체력이 아직 남아있을 때 (살아있을 때)
+                else:
+                    if hit_sound:
+                        hit_sound.play() # 👉 죽지 않았을 때만 즉시 피격음을 냅니다!
             # ────────────────────────────────────────────────────────
             
             if -150 < rect.x < WIDTH + 150 and -150 < rect.y < HEIGHT + 150:
