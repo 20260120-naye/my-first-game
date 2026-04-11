@@ -34,8 +34,19 @@ FRAME_DELAY        = 150   # ms
 DISPLAY_SCALE      = 3     # 화면에 맞게 비율 조정
 
 pygame.init()
+pygame.mixer.init() # 오디오 믹서 초기화 (추가됨)
+
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Undertale Knife Pattern Upgrade")
+
+# ── 배경음악 로드 및 재생 (추가됨) ────────────────────────────
+try:
+    pygame.mixer.music.load("./code/week06/assets/sounds/배경음.mp3")
+    pygame.mixer.music.set_volume(0.05)
+    pygame.mixer.music.play(-1)  # -1: 무한 반복
+except pygame.error as e:
+    print(f"배경음악을 불러올 수 없습니다: {e}")
+# ────────────────────────────────────────────────────────
 
 canvas = pygame.Surface((WIDTH, HEIGHT)) 
 clock = pygame.time.Clock()
@@ -71,6 +82,7 @@ def create_base_knife():
 BASE_KNIFE_IMG = create_base_knife()
 
 # --- 스프라이트 시트 로드 및 준비 ---
+# 실제 환경에서는 원래의 SHEET_B64 값을 입력해주세요.
 sheet_bytes = base64.b64decode(SHEET_B64)
 player_sheet = pygame.image.load(io.BytesIO(sheet_bytes)).convert_alpha()
 
@@ -574,7 +586,9 @@ def main():
                 shake_timer = 6  
                 
                 if lives <= 0:
+                    pygame.mixer.music.stop() # 🎵 1. 체력이 다 닳으면 배경음악 정지
                     game_over_screen(player) 
+                    pygame.mixer.music.play(-1) # 🎵 2. 재시작('R') 시 배경음악 다시 무한 재생
                     main() 
                     return
             
@@ -629,7 +643,6 @@ def main():
                 
             # 피격 시 전체적으로 붉게 만들기
             if is_hurt:
-                # BLEND_RGB_ADD를 사용하면 알파(투명도) 채널은 그대로 유지됩니다.
                 current_frame_surf.fill((150, 0, 0), special_flags=pygame.BLEND_RGB_ADD)
                 
             # 배드엔딩 시 어둡고 약간 투명하게
