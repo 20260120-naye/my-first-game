@@ -7,13 +7,13 @@ pygame.display.set_caption("Sound Basics")
 clock = pygame.time.Clock()
 
 # ── ① 효과음 로드 ──────────────────────────────
-#shoot_sound = pygame.mixer.Sound("./code/week06/assets/sounds/배경음.mp3")
+shoot_sound = pygame.mixer.Sound("./code/week06/assets/sounds/피격음.mp3")
 
 # ── ② 배경음악 로드 ────────────────────────────
 pygame.mixer.music.load("./code/week06/assets/sounds/배경음.mp3")
 
 # ── ③ 볼륨 조절 ────────────────────────────────
-#shoot_sound.set_volume(0.5)        # 0.0 ~ 1.0
+shoot_sound.set_volume(0.3)        # 0.0 ~ 1.0
 pygame.mixer.music.set_volume(0.05)
 
 # ── ④ 배경음악 재생 ────────────────────────────
