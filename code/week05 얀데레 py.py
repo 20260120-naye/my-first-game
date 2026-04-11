@@ -34,18 +34,24 @@ FRAME_DELAY        = 150   # ms
 DISPLAY_SCALE      = 3     # 화면에 맞게 비율 조정
 
 pygame.init()
-pygame.mixer.init() # 오디오 믹서 초기화 (추가됨)
+pygame.mixer.init() # 오디오 믹서 초기화
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Undertale Knife Pattern Upgrade")
 
-# ── 배경음악 로드 및 재생 (추가됨) ────────────────────────────
+# ── 효과음 및 배경음악 로드 및 재생 ────────────────────────────
+hit_sound = None
 try:
+    # ① 효과음(피격음) 로드 및 볼륨 조절
+    hit_sound = pygame.mixer.Sound("./code/week06/assets/sounds/피격음.mp3")
+    hit_sound.set_volume(0.3)
+
+    # ② 배경음악 로드 및 재생
     pygame.mixer.music.load("./code/week06/assets/sounds/배경음.mp3")
     pygame.mixer.music.set_volume(0.05)
     pygame.mixer.music.play(-1)  # -1: 무한 반복
 except pygame.error as e:
-    print(f"배경음악을 불러올 수 없습니다: {e}")
+    print(f"사운드 파일을 불러올 수 없습니다: {e}")
 # ────────────────────────────────────────────────────────
 
 canvas = pygame.Surface((WIDTH, HEIGHT)) 
@@ -82,7 +88,6 @@ def create_base_knife():
 BASE_KNIFE_IMG = create_base_knife()
 
 # --- 스프라이트 시트 로드 및 준비 ---
-# 실제 환경에서는 원래의 SHEET_B64 값을 입력해주세요.
 sheet_bytes = base64.b64decode(SHEET_B64)
 player_sheet = pygame.image.load(io.BytesIO(sheet_bytes)).convert_alpha()
 
@@ -580,17 +585,22 @@ def main():
 
             knife_hitbox = rect 
             
+            # --- 🎯 피격 판정 및 효과음 재생 ────────────────────────────
             if game_state == "DODGE" and invincible == 0 and is_active and player_hitbox.colliderect(knife_hitbox):
+                if hit_sound:
+                    hit_sound.play() # 효과음 재생
+
                 lives -= 1
                 invincible = 45
                 shake_timer = 6  
                 
                 if lives <= 0:
-                    pygame.mixer.music.stop() # 🎵 1. 체력이 다 닳으면 배경음악 정지
+                    pygame.mixer.music.stop() # 체력이 다 닳으면 배경음악 정지
                     game_over_screen(player) 
-                    pygame.mixer.music.play(-1) # 🎵 2. 재시작('R') 시 배경음악 다시 무한 재생
+                    pygame.mixer.music.play(-1) # 재시작 시 배경음악 다시 재생
                     main() 
                     return
+            # ────────────────────────────────────────────────────────
             
             if -150 < rect.x < WIDTH + 150 and -150 < rect.y < HEIGHT + 150:
                 survived_knives.append(knife)
