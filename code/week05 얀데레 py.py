@@ -596,7 +596,12 @@ def main():
                 
                 if lives <= 0:
                     pygame.mixer.music.stop() # 체력이 다 닳으면 배경음악 정지
-                    game_over_screen(player) 
+                    pygame.mixer.music.set_volume(0.1) # 게임오버음 볼륨 조절
+                    pygame.mixer.music.load("./code/week06/assets/sounds/게임오버음.mp3")
+                    pygame.mixer.music.play(1) # 게임오버음 로드
+                    game_over_screen(player)
+                    pygame.mixer.music.load("./code/week06/assets/sounds/배경음.mp3")
+                    pygame.mixer.music.set_volume(0.05)
                     pygame.mixer.music.play(-1) # 재시작 시 배경음악 다시 재생
                     main() 
                     return
