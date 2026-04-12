@@ -254,7 +254,7 @@ def create_multicolor_surface(lines, font_obj):
     return main_surf
 
 
-# 👉 스토리 화면을 출력해주는 함수 (수정됨)
+# 👉 스토리 화면을 출력해주는 함수
 def story_intro_screen():
     # 스토리음악 재생
     pygame.mixer.music.load("./code/week06/assets/sounds/스토리음.mp3")
@@ -614,7 +614,7 @@ def main():
                         face_angle = math.degrees(math.atan2(-dx, -dy))
                         rect = pygame.Rect(0, 0, 18, 18)
                         rect.center = (int(sx), int(sy))
-                        alpha = 255      
+                        alpha = 255     
                         life_timer = 0   
                         knives.append([rect, dx, dy, face_angle, delay_frames, sx, sy, alpha, life_timer])
 
@@ -643,7 +643,7 @@ def main():
                         face_angle = math.degrees(math.atan2(-dx, -dy))
                         rect = pygame.Rect(0, 0, 18, 18)
                         rect.center = (int(sx), int(sy))
-                        alpha = 255      
+                        alpha = 255     
                         life_timer = 0
                         knives.append([rect, dx, dy, face_angle, delay_frames, sx, sy, alpha, life_timer])
                         
@@ -811,6 +811,47 @@ def main():
 
         canvas.fill(BLACK)
         
+        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        # 1. 얀데레 캐릭터 항상 그리기 (상태와 무관하게 표시)
+        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        anim_timer += dt
+        if anim_timer >= FRAME_DELAY:
+            anim_index = (anim_index + 1) % len(walk_frames)
+            anim_timer = 0
+        
+        draw_x = WIDTH // 2
+        draw_y = 170
+
+        is_hurt = False
+        if enemy_hit_timer > 0:
+            draw_x += random.randint(-8, 8)
+            draw_y += random.randint(-8, 8)
+            is_hurt = True
+            enemy_hit_timer -= 1
+
+        if game_state in ["TRUE_ENDING", "BAD_ENDING"]:
+            current_frame_surf = walk_frames[0].copy()
+        else:
+            current_frame_surf = walk_frames[anim_index].copy()
+            
+        if is_hurt:
+            current_frame_surf.fill((150, 0, 0), special_flags=pygame.BLEND_RGB_ADD)
+            
+        if game_state == "BAD_ENDING":
+            current_frame_surf.set_alpha(150)
+            current_frame_surf.fill((50, 50, 50, 255), special_flags=pygame.BLEND_RGBA_MULT)
+
+        scaled_char = pygame.transform.scale(
+            current_frame_surf,
+            (FRAME_W * DISPLAY_SCALE, FRAME_H * DISPLAY_SCALE)
+        )
+        
+        char_rect = scaled_char.get_rect(center=(draw_x, draw_y))
+        canvas.blit(scaled_char, char_rect.topleft)
+
+        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        # 2. 게임 상태별 UI 및 플레이어/무기 그리기
+        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         if game_state == "DODGE":
             pygame.draw.rect(canvas, WHITE, arena_rect, BORDER_THICKNESS)
             for knife in knives:
@@ -828,42 +869,6 @@ def main():
                 pygame.draw.rect(canvas, PLAYER_BLUE, player)
                 
         elif game_state in ["MENU", "HEAL_WAIT", "HEAL_SPIN", "HEAL_RESULT", "LOVE_WAIT", "LOVE_RESULT", "ATTACK_WAIT", "ATTACK_RESULT", "TRUE_ENDING", "BAD_ENDING"]:
-            
-            anim_timer += dt
-            if anim_timer >= FRAME_DELAY:
-                anim_index = (anim_index + 1) % len(walk_frames)
-                anim_timer = 0
-            
-            draw_x = WIDTH // 2
-            draw_y = 170
-
-            is_hurt = False
-            if enemy_hit_timer > 0:
-                draw_x += random.randint(-8, 8)
-                draw_y += random.randint(-8, 8)
-                is_hurt = True
-                enemy_hit_timer -= 1
-
-            if game_state in ["TRUE_ENDING", "BAD_ENDING"]:
-                current_frame_surf = walk_frames[0].copy()
-            else:
-                current_frame_surf = walk_frames[anim_index].copy()
-                
-            if is_hurt:
-                current_frame_surf.fill((150, 0, 0), special_flags=pygame.BLEND_RGB_ADD)
-                
-            if game_state == "BAD_ENDING":
-                current_frame_surf.set_alpha(150)
-                current_frame_surf.fill((50, 50, 50, 255), special_flags=pygame.BLEND_RGBA_MULT)
-
-            scaled_char = pygame.transform.scale(
-                current_frame_surf,
-                (FRAME_W * DISPLAY_SCALE, FRAME_H * DISPLAY_SCALE)
-            )
-            
-            char_rect = scaled_char.get_rect(center=(draw_x, draw_y))
-            canvas.blit(scaled_char, char_rect.topleft)
-
             if game_state not in ["TRUE_ENDING", "BAD_ENDING"]:
                 pygame.draw.rect(canvas, WHITE, MENU_BOX_RECT, BORDER_THICKNESS)
                 line1_text = font.render("상태창", True, WHITE)
