@@ -256,6 +256,11 @@ def create_multicolor_surface(lines, font_obj):
 
 # 👉 스토리 화면을 출력해주는 함수 (수정됨)
 def story_intro_screen():
+    # 스토리음악 재생
+    pygame.mixer.music.load("./code/week06/assets/sounds/스토리음.mp3")
+    pygame.mixer.music.set_volume(0.03)   
+    pygame.mixer.music.play(-1)
+
     # 문장 리스트 (텍스트, 색상)
     scenes = [
         [ [("호서대에 입학해 열심히 생활 중인 ", WHITE), ("플레이어", PLAYER_BLUE), (".", WHITE)] ],
@@ -336,6 +341,13 @@ def story_intro_screen():
             
     # 마지막 [죽어.] 씬
     die_surf = font_huge.render("\"죽어.\"", True, RED)
+    
+    # 죽어 씬 배경음악 재생
+    pygame.mixer.music.stop()
+    pygame.mixer.music.load("./code/week06/assets/sounds/죽어음.wav")
+    pygame.mixer.music.set_volume(0.03)   
+    pygame.mixer.music.play(-1)
+
     info_surf = font_small.render("Enter를 눌러 게임 시작", True, GRAY)
     
     blink_timer = 0
