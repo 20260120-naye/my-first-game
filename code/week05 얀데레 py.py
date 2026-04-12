@@ -494,7 +494,7 @@ def main():
     # 게임 시작 시 브금 재생
     try:
         pygame.mixer.music.load("./code/week06/assets/sounds/배경음.mp3")
-        pygame.mixer.music.set_volume(0.1)
+        pygame.mixer.music.set_volume(0.08)
         pygame.mixer.music.play(-1) 
     except:
         pass
