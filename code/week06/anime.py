@@ -25,18 +25,18 @@ clock = pygame.time.Clock()
 #  인덱스 0 ~ 3 (총 4개)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 sheet_bytes = base64.b64decode(SHEET_B64)
-player_run_sheet = pygame.image.load(io.BytesIO(sheet_bytes)).convert_alpha()
+player_sheet = pygame.image.load(io.BytesIO(sheet_bytes)).convert_alpha()
 
-player_run_frames = []
+player_frames = []
 for i in range(4):
     row, col = divmod(i, COLS)
     rect = pygame.Rect(col * FRAME_W, row * FRAME_H, FRAME_W, FRAME_H)
-    player_run_frames.append(player_run_sheet.subsurface(rect))
+    player_frames.append(player_sheet.subsurface(rect))
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #  walk_frames: 선택한 프레임 순서
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-walk_frames = [player_run_frames[i] for i in [0, 1, 2, 3, 2, 1]]
+walk_frames = [player_frames[i] for i in [0, 1, 2, 3, 2, 1]]
 
 frame_index = 0
 frame_timer = 0
