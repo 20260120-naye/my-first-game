@@ -63,7 +63,7 @@ try:
 
     # ① 효과음(회복음) 로드 및 볼륨 조절
     heal_sound = pygame.mixer.Sound("./code/week06/assets/sounds/회복음.mp3")
-    heal_sound.set_volume(0.3)
+    heal_sound.set_volume(0.2)
 
     # ① 효과음(엔딩음) 로드 및 볼륨 조절
     ending_sound = pygame.mixer.Sound("./code/week06/assets/sounds/엔딩음.mp3")
