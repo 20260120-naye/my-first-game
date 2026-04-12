@@ -26,7 +26,7 @@ BROWN_HANDLE = (139, 69, 19)
 BLOOD_RED = (180, 0, 0) 
 GRAY = (150, 150, 150) 
 CHAR_DRESS = (255, 182, 193)
-PLAYER_BLUE = (100, 149, 237) # 플레이어 강조용 텍스트 파란색
+PLAYER_BLUE = (100, 149, 237)
 
 # 캐릭터 스프라이트 관련 설정
 FRAME_W, FRAME_H   = 64, 64
@@ -35,7 +35,7 @@ FRAME_DELAY        = 150   # ms
 DISPLAY_SCALE      = 3     # 화면에 맞게 비율 조정
 
 pygame.init()
-pygame.mixer.init() # 오디오 믹서 초기화
+pygame.mixer.init()
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Undertale Knife Pattern Upgrade")
@@ -55,7 +55,7 @@ try:
     hit_sound = pygame.mixer.Sound("./code/week06/assets/sounds/피격음.mp3")
     hit_sound.set_volume(0.1)
     move_sound = pygame.mixer.Sound("./code/week06/assets/sounds/상태창음.mp3")
-    move_sound.set_volume(0.2)
+    move_sound.set_volume(0.4)
     attack_sound = pygame.mixer.Sound("./code/week06/assets/sounds/얀데레공격했을때.mp3")
     attack_sound.set_volume(0.2)
     love_sound = pygame.mixer.Sound("./code/week06/assets/sounds/얀데레사랑했을때.mp3")
@@ -86,9 +86,8 @@ font_big = get_korean_font(72)
 font_mid = get_korean_font(50) 
 font_sub = get_korean_font(30)    
 font_small = get_korean_font(24) 
-font_huge = get_korean_font(180) # "죽어"를 위한 엄청 큰 폰트
+font_huge = get_korean_font(180)
 
-# --- 베이스 칼 이미지 생성 함수 ---
 def create_base_knife():
     w, h = 18, 55
     surf = pygame.Surface((w, h), pygame.SRCALPHA)
@@ -104,12 +103,13 @@ def create_base_knife():
 
 BASE_KNIFE_IMG = create_base_knife()
 
-# --- 스프라이트 시트 로드 및 준비 ---
 try:
-    sheet_bytes = base64.b64decode(SHEET_B64)
-    player_sheet = pygame.image.load(io.BytesIO(sheet_bytes)).convert_alpha()
+    if SHEET_B64 != "...":
+        sheet_bytes = base64.b64decode(SHEET_B64)
+        player_sheet = pygame.image.load(io.BytesIO(sheet_bytes)).convert_alpha()
+    else:
+        player_sheet = pygame.Surface((128, 128)) 
 except Exception as e:
-    # 에러 방지용 더미 이미지
     player_sheet = pygame.Surface((128, 128)) 
 
 player_frames = []
@@ -118,10 +118,8 @@ for i in range(4):
     rect = pygame.Rect(col * FRAME_W, row * FRAME_H, FRAME_W, FRAME_H)
     player_frames.append(player_sheet.subsurface(rect))
 
-# 왕복 재생
 walk_frames = [player_frames[i] for i in [0, 1, 2, 3, 2, 1]]
 
-# --- 전투 박스 (아레나) 설정 ---
 ARENA_W, ARENA_H = 250, 250
 ARENA_X = (WIDTH - ARENA_W) // 2
 ARENA_Y = (HEIGHT - ARENA_H) // 2
@@ -131,7 +129,6 @@ MENU_BOX_RECT = pygame.Rect(50, HEIGHT - 350, WIDTH - 100, 200)
 BORDER_THICKNESS = 5 
 PLAYER_W, PLAYER_H = 20, 20 
 
-# --- 메뉴 버튼 설정 ---
 menu_options = ["공격", "사랑", "회복"] 
 button_w, button_h = 160, 60
 button_y = HEIGHT - 100
@@ -229,7 +226,6 @@ def game_over_screen(player_rect):
                     pygame.quit()
                     sys.exit()
 
-# 👉 멀티 컬러 텍스트 렌더링을 위한 유틸리티 함수
 def create_multicolor_surface(lines, font_obj):
     surfaces = []
     max_w = 0
@@ -257,7 +253,8 @@ def create_multicolor_surface(lines, font_obj):
         current_y += lh + 10
     return main_surf
 
-# 👉 스토리 화면을 출력해주는 함수
+
+# 👉 스토리 화면을 출력해주는 함수 (수정됨)
 def story_intro_screen():
     # 문장 리스트 (텍스트, 색상)
     scenes = [
@@ -275,36 +272,71 @@ def story_intro_screen():
         [ [("그녀", RED),("는 속삭였다...", WHITE)] ]
     ]
     
-    # 일반 텍스트 씬 (5초씩 = 60FPS 기준 300프레임)
     for scene_lines in scenes:
-        surf = create_multicolor_surface(scene_lines, font_mid)
-        alpha = 255
+        # 이 씬에 포함된 전체 글자 수 계산
+        total_chars = sum(len(text) for line in scene_lines for text, color in line)
         
-        # 300프레임 동안 표시 (앞 240프레임 유지, 뒤 60프레임 페이드아웃)
-        for frame in range(300):
+        displayed_chars = 0
+        char_speed = 0.25  # 타이핑 속도 (프레임당 출력될 글자 수)
+        waiting_for_next = True
+        
+        while waiting_for_next:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_RETURN:
+                        if displayed_chars < total_chars:
+                            # 텍스트가 나오는 도중 엔터를 누르면 전부 즉시 표시
+                            displayed_chars = total_chars
+                        else:
+                            # 텍스트가 전부 나온 상태에서 엔터를 누르면 다음 씬으로
+                            waiting_for_next = False
             
             screen.fill(BLACK)
             
-            if frame > 240:
-                alpha -= (255 / 60)
-                if alpha < 0: alpha = 0
+            if displayed_chars < total_chars:
+                displayed_chars += char_speed
+                
+            # 현재 타이핑된 만큼의 글자만 잘라내어 새 씬 리스트 구성
+            partial_scene = []
+            chars_left = int(displayed_chars)
+            for line in scene_lines:
+                partial_line = []
+                for text, color in line:
+                    if chars_left <= 0:
+                        break
+                    if len(text) <= chars_left:
+                        partial_line.append((text, color))
+                        chars_left -= len(text)
+                    else:
+                        partial_line.append((text[:chars_left], color))
+                        chars_left = 0
+                if partial_line:
+                    partial_scene.append(partial_line)
+                if chars_left <= 0:
+                    break
+                    
+            # 화면에 렌더링
+            if partial_scene:
+                surf = create_multicolor_surface(partial_scene, font_mid)
+                rect = surf.get_rect(center=(WIDTH//2, HEIGHT//2))
+                screen.blit(surf, rect)
             
-            # 투명도 적용을 위해 복사본에 글로벌 알파 곱하기
-            surf_copy = surf.copy()
-            surf_copy.fill((255, 255, 255, int(alpha)), special_flags=pygame.BLEND_RGBA_MULT)
+            # 글자가 모두 타이핑 완료되었을 때 다음으로 넘어가는 방법 안내
+            if displayed_chars >= total_chars:
+                info_surf = font_small.render("엔터(Enter)를 눌러 계속...", True, GRAY)
+                if (pygame.time.get_ticks() // 600) % 2 == 0:
+                    info_rect = info_surf.get_rect(center=(WIDTH//2, HEIGHT - 50))
+                    screen.blit(info_surf, info_rect)
             
-            rect = surf_copy.get_rect(center=(WIDTH//2, HEIGHT//2))
-            screen.blit(surf_copy, rect)
             pygame.display.flip()
             clock.tick(FPS)
             
     # 마지막 [죽어.] 씬
     die_surf = font_huge.render("\"죽어.\"", True, RED)
-    info_surf = font_small.render("enter를 눌러 시작", True, GRAY)
+    info_surf = font_small.render("Enter를 눌러 게임 시작", True, GRAY)
     
     blink_timer = 0
     while True:
@@ -331,10 +363,8 @@ def story_intro_screen():
         pygame.display.flip()
         clock.tick(FPS)
 
+
 def main():
-    # ------------------------------------------------------------------
-    # [수정된 부분] R키를 눌러 다시 시작할 때 모든 사운드 채널/음악 정지
-    # ------------------------------------------------------------------
     pygame.mixer.stop()
     pygame.mixer.music.stop()
 
