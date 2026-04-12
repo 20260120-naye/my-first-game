@@ -61,6 +61,10 @@ try:
     love_sound = pygame.mixer.Sound("./code/week06/assets/sounds/얀데레사랑했을때.mp3")
     love_sound.set_volume(0.3)
 
+    # ① 효과음(회복음) 로드 및 볼륨 조절
+    heal_sound = pygame.mixer.Sound("./code/week06/assets/sounds/회복음.mp3")
+    heal_sound.set_volume(0.3)
+
     # ② 배경음악 로드 및 재생
     pygame.mixer.music.load("./code/week06/assets/sounds/배경음.mp3")
     pygame.mixer.music.set_volume(0.05)
@@ -348,6 +352,7 @@ def main():
                 elif game_state == "HEAL_WAIT":
                     if e.key == pygame.K_z or e.key == pygame.K_RETURN:
                         move_sound.play()
+                        heal_sound.play()
                         game_state = "HEAL_SPIN"
                         spin_timer = spin_duration
                     elif e.key == pygame.K_ESCAPE:
