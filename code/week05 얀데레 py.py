@@ -332,6 +332,12 @@ def story_intro_screen():
         clock.tick(FPS)
 
 def main():
+    # ------------------------------------------------------------------
+    # [수정된 부분] R키를 눌러 다시 시작할 때 모든 사운드 채널/음악 정지
+    # ------------------------------------------------------------------
+    pygame.mixer.stop()
+    pygame.mixer.music.stop()
+
     player = pygame.Rect(
         arena_rect.centerx - PLAYER_W // 2, 
         arena_rect.centery - PLAYER_H // 2, 
@@ -777,7 +783,7 @@ def main():
                     draw_realistic_knife(canvas, knife[0], knife[3], alpha) 
                 
             if invincible == 0 or (invincible // 5) % 2 == 0:
-                pygame.draw.rect(canvas, RED, player)
+                pygame.draw.rect(canvas, PLAYER_BLUE, player)
                 
         elif game_state in ["MENU", "HEAL_WAIT", "HEAL_SPIN", "HEAL_RESULT", "LOVE_WAIT", "LOVE_RESULT", "ATTACK_WAIT", "ATTACK_RESULT", "TRUE_ENDING", "BAD_ENDING"]:
             
@@ -841,7 +847,7 @@ def main():
                     if i == menu_index and game_state == "MENU":
                         heart_x = rect.x + 15
                         heart_y = rect.y + (rect.height - PLAYER_H) // 2
-                        pygame.draw.rect(canvas, RED, (heart_x, heart_y, PLAYER_W, PLAYER_H))
+                        pygame.draw.rect(canvas, PLAYER_BLUE, (heart_x, heart_y, PLAYER_W, PLAYER_H))
 
         if game_state in ["HEAL_WAIT", "HEAL_SPIN", "HEAL_RESULT", "LOVE_WAIT", "LOVE_RESULT", "ATTACK_WAIT", "ATTACK_RESULT"]:
             roulette_w, roulette_h = 450, 200
