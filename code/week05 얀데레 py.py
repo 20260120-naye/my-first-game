@@ -65,6 +65,10 @@ try:
     heal_sound = pygame.mixer.Sound("./code/week06/assets/sounds/회복음.mp3")
     heal_sound.set_volume(0.3)
 
+    # ① 효과음(엔딩음) 로드 및 볼륨 조절
+    ending_sound = pygame.mixer.Sound("./code/week06/assets/sounds/엔딩음.mp3")
+    ending_sound.set_volume(0.1)
+
     # ② 배경음악 로드 및 재생
     pygame.mixer.music.load("./code/week06/assets/sounds/배경음.mp3")
     pygame.mixer.music.set_volume(0.05)
@@ -320,6 +324,7 @@ def main():
                         if yandere_hp <= 0:
                             game_state = "BAD_ENDING"
                             pygame.mixer.music.stop() # 👉 배드 엔딩 시 배경음악 정지
+                            ending_sound.play()
                         else:
                             game_state = "DODGE"
                             pattern_timer = 0
@@ -342,6 +347,7 @@ def main():
                         if affection >= max_affection:
                             game_state = "TRUE_ENDING" 
                             pygame.mixer.music.stop() # 👉 해피 엔딩 시 배경음악 정지
+                            ending_sound.play()
                         else:
                             game_state = "DODGE"
                             pattern_timer = 0
