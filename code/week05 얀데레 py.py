@@ -802,7 +802,6 @@ def main():
         player_hitbox.center = player.center
 
         survived_knives = []
-        survived_knives = []
         for knife in knives:
             rect, dx, dy, direction = knife[0], knife[1], knife[2], knife[3]
             delay = knife[4] if len(knife) > 4 else 0
@@ -838,8 +837,9 @@ def main():
                     rect.x += dx
                     rect.y += dy
 
-            if len(knife) > 7: 
-                knife[8] += 1  
+            if len(knife) > 7:
+                if is_active:
+                    knife[8] += 1  
 
                 threshold = 0
                 if current_pattern == 4:
