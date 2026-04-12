@@ -299,11 +299,13 @@ def main():
                     elif e.key == pygame.K_ESCAPE:
                         game_state = "MENU"
                         
+                
                 elif game_state == "ATTACK_RESULT":
                     if e.key == pygame.K_z or e.key == pygame.K_RETURN:
                         move_sound.play()
                         if yandere_hp <= 0:
                             game_state = "BAD_ENDING"
+                            pygame.mixer.music.stop() # 👉 배드 엔딩 시 배경음악 정지
                         else:
                             game_state = "DODGE"
                             pattern_timer = 0
@@ -324,6 +326,7 @@ def main():
                         move_sound.play()
                         if affection >= max_affection:
                             game_state = "TRUE_ENDING" 
+                            pygame.mixer.music.stop() # 👉 해피 엔딩 시 배경음악 정지
                         else:
                             game_state = "DODGE"
                             pattern_timer = 0
@@ -350,6 +353,11 @@ def main():
                         
                 elif game_state in ["TRUE_ENDING", "BAD_ENDING"]:
                     if e.key == pygame.K_r: 
+                        # 👉 재시작 시 배경음악을 다시 로드하고 재생
+                        pygame.mixer.music.load("./code/week06/assets/sounds/배경음.mp3")
+                        pygame.mixer.music.set_volume(0.05)
+                        pygame.mixer.music.play(-1)
+                        
                         main()
                         return
                     elif e.key == pygame.K_q: 
