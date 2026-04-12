@@ -47,14 +47,20 @@ hit_sound = None
 try:
     # ① 효과음(피격음) 로드 및 볼륨 조절
     hit_sound = pygame.mixer.Sound("./code/week06/assets/sounds/피격음.mp3")
-    hit_sound.set_volume(0.3)
+    hit_sound.set_volume(0.2)
 
     # ① 효과음(상태창음) 로드 및 볼륨 조절
     move_sound = pygame.mixer.Sound("./code/week06/assets/sounds/상태창음.mp3")
-    move_sound.set_volume(0.5)
+    move_sound.set_volume(0.3)
 
+    # ① 효과음(공격음) 로드 및 볼륨 조절
     attack_sound = pygame.mixer.Sound("./code/week06/assets/sounds/얀데레공격했을때.mp3")
-    attack_sound.set_volume(0.5)
+    attack_sound.set_volume(0.3)
+
+    # ① 효과음(사랑음) 로드 및 볼륨 조절
+    love_sound = pygame.mixer.Sound("./code/week06/assets/sounds/얀데레사랑했을때.mp3")
+    love_sound.set_volume(0.3)
+
     # ② 배경음악 로드 및 재생
     pygame.mixer.music.load("./code/week06/assets/sounds/배경음.mp3")
     pygame.mixer.music.set_volume(0.05)
@@ -320,6 +326,7 @@ def main():
                 elif game_state == "LOVE_WAIT":
                     if e.key == pygame.K_z or e.key == pygame.K_RETURN:
                         move_sound.play()
+                        love_sound.play()
                         affection += 1 
                         game_state = "LOVE_RESULT"
                     elif e.key == pygame.K_ESCAPE:
