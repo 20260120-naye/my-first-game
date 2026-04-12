@@ -26,6 +26,7 @@ BROWN_HANDLE = (139, 69, 19)
 BLOOD_RED = (180, 0, 0) 
 GRAY = (150, 150, 150) 
 CHAR_DRESS = (255, 182, 193)
+PLAYER_BLUE = (100, 149, 237) # 플레이어 강조용 텍스트 파란색
 
 # 캐릭터 스프라이트 관련 설정
 FRAME_W, FRAME_H   = 64, 64
@@ -39,40 +40,32 @@ pygame.mixer.init() # 오디오 믹서 초기화
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Undertale Knife Pattern Upgrade")
 
-# 👉 [추가] 2초 뒤 피격음을 재생하기 위한 커스텀 이벤트 설정
+# 커스텀 이벤트 설정
 PLAY_HIT_SOUND = pygame.USEREVENT + 1 
 
 # ── 효과음 및 배경음악 로드 및 재생 ────────────────────────────
 hit_sound = None
+move_sound = None
+attack_sound = None
+love_sound = None
+heal_sound = None
+ending_sound = None
+gameover_sound = None
 try:
-    # ① 효과음(피격음) 로드 및 볼륨 조절
     hit_sound = pygame.mixer.Sound("./code/week06/assets/sounds/피격음.mp3")
-    hit_sound.set_volume(0.2)
-
-    # ① 효과음(상태창음) 로드 및 볼륨 조절
+    hit_sound.set_volume(0.1)
     move_sound = pygame.mixer.Sound("./code/week06/assets/sounds/상태창음.mp3")
-    move_sound.set_volume(0.3)
-
-    # ① 효과음(공격음) 로드 및 볼륨 조절
+    move_sound.set_volume(0.2)
     attack_sound = pygame.mixer.Sound("./code/week06/assets/sounds/얀데레공격했을때.mp3")
-    attack_sound.set_volume(0.3)
-
-    # ① 효과음(사랑음) 로드 및 볼륨 조절
+    attack_sound.set_volume(0.2)
     love_sound = pygame.mixer.Sound("./code/week06/assets/sounds/얀데레사랑했을때.mp3")
-    love_sound.set_volume(0.3)
-
-    # ① 효과음(회복음) 로드 및 볼륨 조절
+    love_sound.set_volume(0.2)
     heal_sound = pygame.mixer.Sound("./code/week06/assets/sounds/회복음.mp3")
-    heal_sound.set_volume(0.2)
-
-    # ① 효과음(엔딩음) 로드 및 볼륨 조절
+    heal_sound.set_volume(0.1)
     ending_sound = pygame.mixer.Sound("./code/week06/assets/sounds/엔딩음.mp3")
-    ending_sound.set_volume(0.1)
-
-    # ② 배경음악 로드 및 재생
-    pygame.mixer.music.load("./code/week06/assets/sounds/배경음.mp3")
-    pygame.mixer.music.set_volume(0.05)
-    pygame.mixer.music.play(-1)  # -1: 무한 반복
+    ending_sound.set_volume(0.05)
+    gameover_sound = pygame.mixer.Sound("./code/week06/assets/sounds/게임오버음.mp3")
+    gameover_sound.set_volume(0.1)
 except pygame.error as e:
     print(f"사운드 파일을 불러올 수 없습니다: {e}")
 # ────────────────────────────────────────────────────────
@@ -93,6 +86,7 @@ font_big = get_korean_font(72)
 font_mid = get_korean_font(50) 
 font_sub = get_korean_font(30)    
 font_small = get_korean_font(24) 
+font_huge = get_korean_font(180) # "죽어"를 위한 엄청 큰 폰트
 
 # --- 베이스 칼 이미지 생성 함수 ---
 def create_base_knife():
@@ -115,8 +109,8 @@ try:
     sheet_bytes = base64.b64decode(SHEET_B64)
     player_sheet = pygame.image.load(io.BytesIO(sheet_bytes)).convert_alpha()
 except Exception as e:
-    print(f"이미지 로드 실패 (SHEET_B64를 제대로 입력했는지 확인하세요): {e}")
-    player_sheet = pygame.Surface((128, 128)) # 에러 방지용 더미 이미지
+    # 에러 방지용 더미 이미지
+    player_sheet = pygame.Surface((128, 128)) 
 
 player_frames = []
 for i in range(4):
@@ -124,7 +118,7 @@ for i in range(4):
     rect = pygame.Rect(col * FRAME_W, row * FRAME_H, FRAME_W, FRAME_H)
     player_frames.append(player_sheet.subsurface(rect))
 
-# 왕복 재생 (0, 1, 2, 3, 2, 1)
+# 왕복 재생
 walk_frames = [player_frames[i] for i in [0, 1, 2, 3, 2, 1]]
 
 # --- 전투 박스 (아레나) 설정 ---
@@ -135,7 +129,6 @@ arena_rect = pygame.Rect(ARENA_X, ARENA_Y, ARENA_W, ARENA_H)
 
 MENU_BOX_RECT = pygame.Rect(50, HEIGHT - 350, WIDTH - 100, 200)
 BORDER_THICKNESS = 5 
-
 PLAYER_W, PLAYER_H = 20, 20 
 
 # --- 메뉴 버튼 설정 ---
@@ -188,21 +181,17 @@ def spawn_knife(side_override=None):
         y = random.randint(arena_rect.top, arena_rect.bottom - K_SHORT)
         return pygame.Rect(x, y, K_LONG, K_SHORT), -speed, 0, 'left', 0
 
-
-# 👉 게임오버 처리 화면
 def game_over_screen(player_rect):
     global hit_sound
     alpha = 255
     fade_speed = 2
     
-    # 페이드 아웃 중에도 2초가 지날 수 있으므로 이벤트 루프 추가 확인
     while alpha > 0:
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
                 
-            # 👉 [추가] 타이머 알람이 울리면 피격음 재생!
             if e.type == PLAY_HIT_SOUND:
                 if hit_sound:
                     hit_sound.play()
@@ -218,7 +207,6 @@ def game_over_screen(player_rect):
     
     pygame.time.delay(500)
 
-    # 본 게임오버 대기 화면
     while True:
         screen.fill(BLACK)
         text1 = font_big.render("살해 당했습니다..", True, RED)
@@ -234,15 +222,114 @@ def game_over_screen(player_rect):
             if e.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
-                
-            
-
             if e.type == pygame.KEYDOWN:
                 if e.key == pygame.K_r: 
                     return
                 if e.key == pygame.K_q:
                     pygame.quit()
                     sys.exit()
+
+# 👉 멀티 컬러 텍스트 렌더링을 위한 유틸리티 함수
+def create_multicolor_surface(lines, font_obj):
+    surfaces = []
+    max_w = 0
+    total_h = 0
+    for line in lines:
+        line_w = 0
+        line_h = 0
+        rendered_chunks = []
+        for text, color in line:
+            chunk = font_obj.render(text, True, color)
+            rendered_chunks.append(chunk)
+            line_w += chunk.get_width()
+            line_h = max(line_h, chunk.get_height())
+        surfaces.append((rendered_chunks, line_w, line_h))
+        max_w = max(max_w, line_w)
+        total_h += line_h + 10
+
+    main_surf = pygame.Surface((max_w, total_h), pygame.SRCALPHA)
+    current_y = 0
+    for chunks, lw, lh in surfaces:
+        current_x = (max_w - lw) // 2 
+        for chunk in chunks:
+            main_surf.blit(chunk, (current_x, current_y))
+            current_x += chunk.get_width()
+        current_y += lh + 10
+    return main_surf
+
+# 👉 스토리 화면을 출력해주는 함수
+def story_intro_screen():
+    # 문장 리스트 (텍스트, 색상)
+    scenes = [
+        [ [("호서대에 입학해 열심히 생활 중인 ", WHITE), ("플레이어", PLAYER_BLUE), (".", WHITE)] ],
+        [ 
+            [("저 멀리 ", WHITE), ("플레이어", PLAYER_BLUE), ("를 좋아하는 ", WHITE)],
+            [("얀데레", RED), ("가 몰래 쳐다보고 있다.", WHITE)] 
+        ],
+        [ [("점심시간, ", WHITE), ("플레이어", PLAYER_BLUE), ("가 점심 먹으러 가던 길.", WHITE)] ],
+        [ 
+            [("같은 과에 활기찬 여자아이가 ", WHITE), ("플레이어", PLAYER_BLUE), ("의", WHITE) ],
+            [("팔짱을", WHITE),  (" 끼고 같이 점심 먹으러 가고있다.", WHITE)] 
+        ],
+        [ [("웃고있는 ", WHITE), ("플레이어", PLAYER_BLUE), ("의 얼굴을 본 ", WHITE), ("얀데레", RED), (".", WHITE)] ],
+        [ [("그녀", RED),("는 속삭였다...", WHITE)] ]
+    ]
+    
+    # 일반 텍스트 씬 (5초씩 = 60FPS 기준 300프레임)
+    for scene_lines in scenes:
+        surf = create_multicolor_surface(scene_lines, font_mid)
+        alpha = 255
+        
+        # 300프레임 동안 표시 (앞 240프레임 유지, 뒤 60프레임 페이드아웃)
+        for frame in range(300):
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+            
+            screen.fill(BLACK)
+            
+            if frame > 240:
+                alpha -= (255 / 60)
+                if alpha < 0: alpha = 0
+            
+            # 투명도 적용을 위해 복사본에 글로벌 알파 곱하기
+            surf_copy = surf.copy()
+            surf_copy.fill((255, 255, 255, int(alpha)), special_flags=pygame.BLEND_RGBA_MULT)
+            
+            rect = surf_copy.get_rect(center=(WIDTH//2, HEIGHT//2))
+            screen.blit(surf_copy, rect)
+            pygame.display.flip()
+            clock.tick(FPS)
+            
+    # 마지막 [죽어.] 씬
+    die_surf = font_huge.render("\"죽어.\"", True, RED)
+    info_surf = font_small.render("enter를 눌러 시작", True, GRAY)
+    
+    blink_timer = 0
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_RETURN:
+                    return # 함수를 종료하고 메인 게임으로 넘어감
+        
+        screen.fill(BLACK)
+        
+        # 죽어 출력
+        die_rect = die_surf.get_rect(center=(WIDTH//2, HEIGHT//2 - 50))
+        screen.blit(die_surf, die_rect)
+        
+        # 깜빡이는 효과
+        blink_timer += 1
+        if (blink_timer // 30) % 2 == 0:
+            info_rect = info_surf.get_rect(center=(WIDTH//2, HEIGHT//2 + 80))
+            screen.blit(info_surf, info_rect)
+            
+        pygame.display.flip()
+        clock.tick(FPS)
 
 def main():
     player = pygame.Rect(
@@ -280,9 +367,16 @@ def main():
     yandere_hp = 5
     max_yandere_hp = 5
 
-    # 애니메이션 상태 관리 변수
     anim_index = 0
     anim_timer = 0
+
+    # 게임 시작 시 브금 재생
+    try:
+        pygame.mixer.music.load("./code/week06/assets/sounds/배경음.mp3")
+        pygame.mixer.music.set_volume(0.1)
+        pygame.mixer.music.play(-1) 
+    except:
+        pass
 
     while True:
         dt = clock.tick(FPS)
@@ -296,35 +390,33 @@ def main():
                 if game_state == "MENU":
                     if e.key == pygame.K_a:
                         menu_index = max(0, menu_index - 1)
-                        move_sound.play()
+                        if move_sound: move_sound.play()
                     elif e.key == pygame.K_d:
                         menu_index = min(2, menu_index + 1)
-                        move_sound.play()
+                        if move_sound: move_sound.play()
                     elif e.key == pygame.K_z or e.key == pygame.K_RETURN:
                         if menu_index == 2: game_state = "HEAL_WAIT"
                         elif menu_index == 1: game_state = "LOVE_WAIT"
                         elif menu_index == 0: game_state = "ATTACK_WAIT"
-                        move_sound.play()
+                        if move_sound: move_sound.play()
                             
                 elif game_state == "ATTACK_WAIT":
                     if e.key == pygame.K_z or e.key == pygame.K_RETURN:
-                        move_sound.play()
-                        attack_sound.play()
+                        if move_sound: move_sound.play()
+                        if attack_sound: attack_sound.play()
                         yandere_hp -= 1
                         enemy_hit_timer = 20 
                         game_state = "ATTACK_RESULT"
                     elif e.key == pygame.K_ESCAPE:
                         game_state = "MENU"
                         
-                
                 elif game_state == "ATTACK_RESULT":
                     if e.key == pygame.K_z or e.key == pygame.K_RETURN:
-                        move_sound.play()
-
+                        if move_sound: move_sound.play()
                         if yandere_hp <= 0:
                             game_state = "BAD_ENDING"
-                            pygame.mixer.music.stop() # 👉 배드 엔딩 시 배경음악 정지
-                            ending_sound.play()
+                            pygame.mixer.music.stop() 
+                            if ending_sound: ending_sound.play()
                         else:
                             game_state = "DODGE"
                             pattern_timer = 0
@@ -334,8 +426,8 @@ def main():
                             
                 elif game_state == "LOVE_WAIT":
                     if e.key == pygame.K_z or e.key == pygame.K_RETURN:
-                        move_sound.play()
-                        love_sound.play()
+                        if move_sound: move_sound.play()
+                        if love_sound: love_sound.play()
                         affection += 1 
                         game_state = "LOVE_RESULT"
                     elif e.key == pygame.K_ESCAPE:
@@ -343,11 +435,11 @@ def main():
                         
                 elif game_state == "LOVE_RESULT":
                     if e.key == pygame.K_z or e.key == pygame.K_RETURN:
-                        move_sound.play()
+                        if move_sound: move_sound.play()
                         if affection >= max_affection:
                             game_state = "TRUE_ENDING" 
-                            pygame.mixer.music.stop() # 👉 해피 엔딩 시 배경음악 정지
-                            ending_sound.play()
+                            pygame.mixer.music.stop() 
+                            if ending_sound: ending_sound.play()
                         else:
                             game_state = "DODGE"
                             pattern_timer = 0
@@ -357,8 +449,8 @@ def main():
                             
                 elif game_state == "HEAL_WAIT":
                     if e.key == pygame.K_z or e.key == pygame.K_RETURN:
-                        move_sound.play()
-                        heal_sound.play()
+                        if move_sound: move_sound.play()
+                        if heal_sound: heal_sound.play()
                         game_state = "HEAL_SPIN"
                         spin_timer = spin_duration
                     elif e.key == pygame.K_ESCAPE:
@@ -366,7 +458,7 @@ def main():
                         
                 elif game_state == "HEAL_RESULT":
                     if e.key == pygame.K_z or e.key == pygame.K_RETURN:
-                        move_sound.play()
+                        if move_sound: move_sound.play()
                         game_state = "DODGE"
                         pattern_timer = 0
                         player.centerx, player.centery = arena_rect.centerx, arena_rect.centery
@@ -375,11 +467,6 @@ def main():
                         
                 elif game_state in ["TRUE_ENDING", "BAD_ENDING"]:
                     if e.key == pygame.K_r: 
-                        # 👉 재시작 시 배경음악을 다시 로드하고 재생
-                        pygame.mixer.music.load("./code/week06/assets/sounds/배경음.mp3")
-                        pygame.mixer.music.set_volume(0.05)
-                        pygame.mixer.music.play(-1)
-                        
                         main()
                         return
                     elif e.key == pygame.K_q: 
@@ -402,7 +489,6 @@ def main():
             pattern_timer += 1 
             spawn_timer += 1
 
-            # ================= [공격 패턴 구현 구간] =================
             if current_pattern == 1: 
                 if spawn_timer >= 18:
                     spawn_timer = 0
@@ -463,8 +549,8 @@ def main():
                 current_spawn_rate = 60
                 if spawn_timer >= current_spawn_rate:
                     spawn_timer = 0
-                    speed = 10          
-                    dist = 220          
+                    speed = 10         
+                    dist = 220         
                     delay_frames = 25   
                     px = player.centerx
                     py = player.centery
@@ -572,7 +658,6 @@ def main():
                         spawn_timer = 0
                         p7_lanes = [0, 1, 2]
                         random.shuffle(p7_lanes)
-            # =========================================================
 
             if pattern_timer >= 600:
                 game_state = "MENU"
@@ -648,41 +733,28 @@ def main():
 
             knife_hitbox = rect 
             
-            # --- 🎯 피격 판정 및 게임오버 처리 ────────────────────────────
             if game_state == "DODGE" and invincible == 0 and is_active and player_hitbox.colliderect(knife_hitbox):
-                
-                # 1. 일단 체력을 먼저 깎고 상태를 업데이트합니다.
                 lives -= 1
                 invincible = 45
                 shake_timer = 6  
                 
-                # 2. 체력이 0이 되었을 때 (죽었을 때)
                 if lives <= 0:
-                    pygame.mixer.music.stop() # 배경음악 정지
-                    pygame.mixer.music.set_volume(0.1) # 게임오버음 볼륨 조절
-                    pygame.mixer.music.load("./code/week06/assets/sounds/게임오버음.mp3")
-                    pygame.mixer.music.play(1) # 게임오버음 즉시 재생
+                    pygame.mixer.music.stop() 
+                    if gameover_sound:
+                        gameover_sound.play()
                     
-                    # 2초 뒤에 피격음 알람 설정 (즉시 재생하지 않음)
                     pygame.time.set_timer(PLAY_HIT_SOUND, 2000, 1)
 
-                    # 게임 오버 화면으로 진입
                     game_over_screen(player)
                     
-                    # 재시작 시 안전을 위해 타이머 초기화 
                     pygame.time.set_timer(PLAY_HIT_SOUND, 0)
                     
-                    pygame.mixer.music.load("./code/week06/assets/sounds/배경음.mp3")
-                    pygame.mixer.music.set_volume(0.05)
-                    pygame.mixer.music.play(-1) 
                     main() 
                     return
                     
-                # 3. 체력이 아직 남아있을 때 (살아있을 때)
                 else:
                     if hit_sound:
-                        hit_sound.play() # 👉 죽지 않았을 때만 즉시 피격음을 냅니다!
-            # ────────────────────────────────────────────────────────
+                        hit_sound.play() 
             
             if -150 < rect.x < WIDTH + 150 and -150 < rect.y < HEIGHT + 150:
                 survived_knives.append(knife)
@@ -709,7 +781,6 @@ def main():
                 
         elif game_state in ["MENU", "HEAL_WAIT", "HEAL_SPIN", "HEAL_RESULT", "LOVE_WAIT", "LOVE_RESULT", "ATTACK_WAIT", "ATTACK_RESULT", "TRUE_ENDING", "BAD_ENDING"]:
             
-            # --- 애니메이션 타이머 업데이트 (Idle Animation) ---
             anim_timer += dt
             if anim_timer >= FRAME_DELAY:
                 anim_index = (anim_index + 1) % len(walk_frames)
@@ -718,7 +789,6 @@ def main():
             draw_x = WIDTH // 2
             draw_y = 170
 
-            # 피격 시 화면 흔들림 및 붉은 색조 처리
             is_hurt = False
             if enemy_hit_timer > 0:
                 draw_x += random.randint(-8, 8)
@@ -726,18 +796,14 @@ def main():
                 is_hurt = True
                 enemy_hit_timer -= 1
 
-            # 스프라이트 프레임 가져오기 및 확대
-            # 엔딩 상황에서는 눈을 감은 모습처럼 보이게 특정 프레임(예: 0번)에 고정
             if game_state in ["TRUE_ENDING", "BAD_ENDING"]:
                 current_frame_surf = walk_frames[0].copy()
             else:
                 current_frame_surf = walk_frames[anim_index].copy()
                 
-            # 피격 시 전체적으로 붉게 만들기
             if is_hurt:
                 current_frame_surf.fill((150, 0, 0), special_flags=pygame.BLEND_RGB_ADD)
                 
-            # 배드엔딩 시 어둡고 약간 투명하게
             if game_state == "BAD_ENDING":
                 current_frame_surf.set_alpha(150)
                 current_frame_surf.fill((50, 50, 50, 255), special_flags=pygame.BLEND_RGBA_MULT)
@@ -747,7 +813,6 @@ def main():
                 (FRAME_W * DISPLAY_SCALE, FRAME_H * DISPLAY_SCALE)
             )
             
-            # 캐릭터의 중심을 draw_x, draw_y에 맞춤
             char_rect = scaled_char.get_rect(center=(draw_x, draw_y))
             canvas.blit(scaled_char, char_rect.topleft)
 
@@ -902,4 +967,6 @@ def main():
         pygame.display.flip()
 
 if __name__ == "__main__":
+    # 메인 게임 시작 전 스토리 인트로 실행
+    story_intro_screen()
     main()
