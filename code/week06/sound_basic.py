@@ -7,8 +7,8 @@ pygame.display.set_caption("Sound Basics")
 clock = pygame.time.Clock()
 
 # ── ① 효과음 로드 ──────────────────────────────
-move_sound = pygame.mixer.Sound("./code/week06/assets/sounds/상태창음.mp3")
-move_sound.set_volume(0.5)        # 0.0 ~ 1.0
+attack_sound = pygame.mixer.Sound("./code/week06/assets/sounds/얀데레공격했을때.mp3")
+attack_sound.set_volume(0.5)        # 0.0 ~ 1.0
 
 # ── ② 배경음악 로드 ────────────────────────────
 pygame.mixer.music.load("./code/week06/assets/sounds/게임오버음.mp3")
@@ -30,7 +30,7 @@ while running:
                 running = False
             # ── ⑤ 스페이스바로 효과음 재생 ────
             if event.key == pygame.K_SPACE:
-                move_sound.play()
+                attack_sound.play()
 
     screen.fill((30, 30, 40))
     pygame.display.flip()

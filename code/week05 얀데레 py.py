@@ -53,6 +53,8 @@ try:
     move_sound = pygame.mixer.Sound("./code/week06/assets/sounds/상태창음.mp3")
     move_sound.set_volume(0.5)
 
+    attack_sound = pygame.mixer.Sound("./code/week06/assets/sounds/얀데레공격했을때.mp3")
+    attack_sound.set_volume(0.5)
     # ② 배경음악 로드 및 재생
     pygame.mixer.music.load("./code/week06/assets/sounds/배경음.mp3")
     pygame.mixer.music.set_volume(0.05)
@@ -293,6 +295,7 @@ def main():
                 elif game_state == "ATTACK_WAIT":
                     if e.key == pygame.K_z or e.key == pygame.K_RETURN:
                         move_sound.play()
+                        attack_sound.play()
                         yandere_hp -= 1
                         enemy_hit_timer = 20 
                         game_state = "ATTACK_RESULT"
@@ -303,6 +306,7 @@ def main():
                 elif game_state == "ATTACK_RESULT":
                     if e.key == pygame.K_z or e.key == pygame.K_RETURN:
                         move_sound.play()
+
                         if yandere_hp <= 0:
                             game_state = "BAD_ENDING"
                             pygame.mixer.music.stop() # 👉 배드 엔딩 시 배경음악 정지
