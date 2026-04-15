@@ -93,16 +93,22 @@ font_small = get_korean_font(24)
 font_huge = get_korean_font(180)
 
 def create_base_knife():
-    w, h = 18, 55
+    w, h = 25, 60
     surf = pygame.Surface((w, h), pygame.SRCALPHA)
     x, y = 0, 0
+    
+    # 캔버스 크기가 바뀌어도 아래 비율 연산 덕분에 그림 크기도 알아서 2배가 됩니다.
     pygame.draw.rect(surf, BROWN_HANDLE, (x + w*0.3, y + h*0.7, w*0.4, h*0.3))
     pygame.draw.rect(surf, GRAY_HILT, (x, y + h*0.6, w, h*0.1))
+    
     blade_points = [(x + w*0.1, y + h*0.6), (x + w*0.9, y + h*0.6), (x + w/2, y)]
     pygame.draw.polygon(surf, GRAY_BLADE, blade_points)
+    
     blood_points = [(x + w*0.25, y + h*0.35), (x + w*0.75, y + h*0.35), (x + w/2, y)]
     pygame.draw.polygon(surf, BLOOD_RED, blood_points)
+    
     pygame.draw.rect(surf, BLOOD_RED, (x + w*0.45, y + h*0.3, w*0.1, h*0.25))
+    
     return surf
 
 BASE_KNIFE_IMG = create_base_knife()
@@ -153,14 +159,14 @@ for i in range(4):
 run_anim_sequence = [run_frames[i] for i in [3, 1, 2, 0]]
 
 
-ARENA_W, ARENA_H = 250, 250
+ARENA_W, ARENA_H = 435, 435
 ARENA_X = (WIDTH - ARENA_W) // 2
 ARENA_Y = (HEIGHT - ARENA_H) // 2
 arena_rect = pygame.Rect(ARENA_X, ARENA_Y, ARENA_W, ARENA_H)
 
 MENU_BOX_RECT = pygame.Rect(50, HEIGHT - 350, WIDTH - 100, 200)
 BORDER_THICKNESS = 5 
-PLAYER_W, PLAYER_H = 20, 20 
+PLAYER_W, PLAYER_H = 40, 40
 
 menu_options = ["공격", "사랑", "회복"] 
 button_w, button_h = 200, 90
@@ -454,8 +460,8 @@ def main():
     pygame.mixer.music.stop()
 
     player = pygame.Rect(
-        arena_rect.centerx - PLAYER_W // 2, 
-        arena_rect.centery - PLAYER_H // 2, 
+        arena_rect.centerx - PLAYER_W // 2,
+        arena_rect.centery - PLAYER_H // 2,
         PLAYER_W, PLAYER_H
     )
 
@@ -644,18 +650,18 @@ def main():
                         knives.append([rect, dx, dy, face_angle, delay_frames, sx, sy])
                     
             elif current_pattern == 3: 
-                if spawn_timer >= 40: 
+                if spawn_timer >= 60:
                     spawn_timer = 0
-                    speed = 6 
+                    speed = 6
                     K_LONG = 55
                     K_SHORT = 18
                     delay_frames = 30 
                     
                     num_knives = ARENA_W // K_SHORT + 1
-                    gap_start = random.randint(0, num_knives - 4)
+                    gap_start = random.randint(0, num_knives - 6)
                     
                     for i in range(num_knives):
-                        if gap_start <= i <= gap_start + 2:
+                        if gap_start <= i <= gap_start + 4:
                             continue
                         sx = ARENA_X + (i * K_SHORT)
                         sy = ARENA_Y + ARENA_H + (K_LONG // 2) 
@@ -798,7 +804,7 @@ def main():
         if invincible > 0:
             invincible -= 1
 
-        player_hitbox = pygame.Rect(0, 0, 8, 8)
+        player_hitbox = pygame.Rect(0, 0, 16, 16)
         player_hitbox.center = player.center
 
         survived_knives = []
@@ -948,7 +954,7 @@ def main():
         elif game_state in ["MENU", "HEAL_WAIT", "HEAL_SPIN", "HEAL_RESULT", "LOVE_WAIT", "LOVE_RESULT", "ATTACK_WAIT", "ATTACK_RESULT", "TRUE_ENDING", "BAD_ENDING"]:
             if game_state not in ["TRUE_ENDING", "BAD_ENDING"]:
                 pygame.draw.rect(canvas, WHITE, MENU_BOX_RECT, BORDER_THICKNESS)
-                line1_text = font_small.render("*상태창*", True, YELLOW)
+                line1_text = font.render("*상태창*", True, YELLOW)
                 canvas.blit(line1_text, (MENU_BOX_RECT.x + 30, MENU_BOX_RECT.y + 30))
 
                 info_move_text = font_small.render("이동: A(좌) D(우)", True, GRAY)
