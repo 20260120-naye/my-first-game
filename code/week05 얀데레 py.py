@@ -16,7 +16,7 @@ RUN_SHEET_B64 = """iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAAACXBIWXMAAAsTA
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #  설정
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-WIDTH, HEIGHT = 1024, 768
+WIDTH, HEIGHT = 1920, 1080
 FPS = 60
 
 # 색상 설정
@@ -36,7 +36,7 @@ PLAYER_BLUE = (100, 149, 237)
 FRAME_W, FRAME_H   = 64, 64
 COLS               = 2
 FRAME_DELAY        = 150   # ms
-DISPLAY_SCALE      = 3     # 화면에 맞게 비율 조정
+DISPLAY_SCALE      = 5     # 화면에 맞게 비율 조정
 
 pygame.init()
 pygame.mixer.init()
@@ -163,7 +163,7 @@ BORDER_THICKNESS = 5
 PLAYER_W, PLAYER_H = 20, 20 
 
 menu_options = ["공격", "사랑", "회복"] 
-button_w, button_h = 160, 60
+button_w, button_h = 200, 90
 button_y = HEIGHT - 100
 button_gap = (WIDTH - (3 * button_w)) // 4 
 button_rects = []
