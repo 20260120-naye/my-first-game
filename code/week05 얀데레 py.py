@@ -948,7 +948,7 @@ def main():
         elif game_state in ["MENU", "HEAL_WAIT", "HEAL_SPIN", "HEAL_RESULT", "LOVE_WAIT", "LOVE_RESULT", "ATTACK_WAIT", "ATTACK_RESULT", "TRUE_ENDING", "BAD_ENDING"]:
             if game_state not in ["TRUE_ENDING", "BAD_ENDING"]:
                 pygame.draw.rect(canvas, WHITE, MENU_BOX_RECT, BORDER_THICKNESS)
-                line1_text = font.render("상태창", True, WHITE)
+                line1_text = font_small.render("*상태창*", True, YELLOW)
                 canvas.blit(line1_text, (MENU_BOX_RECT.x + 30, MENU_BOX_RECT.y + 30))
 
                 info_move_text = font_small.render("이동: A(좌) D(우)", True, GRAY)
@@ -1073,7 +1073,7 @@ def main():
             canvas.blit(text3, (ending_box.centerx - text3.get_width() // 2, start_y + text1.get_height() + gap * 2 + text2.get_height()))
 
         hp_label = font.render("HP: ", True, RED)
-        heart_surf = font.render("♥ ", True, RED)
+        heart_surf = font.render("♥ ", True, PLAYER_BLUE)
         label_w = hp_label.get_width()
         heart_w = heart_surf.get_width()
         total_hp_width = label_w + heart_w * max_lives
