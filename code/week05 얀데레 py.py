@@ -312,7 +312,7 @@ def story_intro_screen():
         [ [("점심시간, ", WHITE), ("플레이어", PLAYER_BLUE), ("가 점심 먹으러 가던 길.", WHITE)] ],
         [ 
             [("같은 과에 활기찬 여자아이가 ", WHITE), ("플레이어", PLAYER_BLUE), ("의", WHITE) ],
-            [("팔짱을", WHITE),  (" 끼고 같이 점심 먹으러 가고있다.", WHITE)] 
+            [("팔짱을", WHITE),  (" 끼고 같이 점심을 먹으러 가고있다.", WHITE)] 
         ],
         [ [("웃고있는 ", WHITE), ("플레이어", PLAYER_BLUE), ("의 얼굴을 본 ", WHITE), ("얀데레", RED), (".", WHITE)] ],
         [ [("그녀", RED),("는 속삭였다...", WHITE)] ]
