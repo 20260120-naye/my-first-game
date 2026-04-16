@@ -16,8 +16,18 @@ RUN_SHEET_B64 = """iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAAACXBIWXMAAAsTA
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #  설정
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-WIDTH, HEIGHT = 1920, 1080
+# 💡 1. 해상도를 읽어오기 위해 Pygame 초기화를 가장 먼저 실행합니다.
+pygame.init()
+pygame.mixer.init()
+
+# 💡 2. 모니터 해상도 자동 감지 및 설정
+info = pygame.display.Info()
+WIDTH, HEIGHT = info.current_w, info.current_h
 FPS = 60
+
+# 💡 3. 테두리 없는 창모드(NOFRAME) 적용
+screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.NOFRAME)
+pygame.display.set_caption("Undertale Knife Pattern Upgrade")
 
 # 색상 설정
 WHITE  = (255, 255, 255)
@@ -43,6 +53,7 @@ pygame.mixer.init()
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Undertale Knife Pattern Upgrade")
+
 
 # 커스텀 이벤트 설정
 PLAY_HIT_SOUND = pygame.USEREVENT + 1 
@@ -331,7 +342,11 @@ def story_intro_screen():
                     pygame.quit()
                     sys.exit()
                 elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_RETURN:
+                    # 💡 메뉴 진입 전에 x를 누르면 바로 게임이 종료되도록 설정
+                    if event.key == pygame.K_x:
+                        pygame.quit()
+                        sys.exit()
+                    elif event.key == pygame.K_RETURN:
                         if displayed_chars < total_chars:
                             displayed_chars = total_chars
                         else:
@@ -514,6 +529,9 @@ def main():
                 sys.exit()
             
             if e.type == pygame.KEYDOWN:
+                if game_state == "DODGE" and e.key == pygame.K_x:
+                    pygame.quit()
+                    sys.exit()
                 if game_state == "MENU":
                     if e.key == pygame.K_a:
                         menu_index = max(0, menu_index - 1)
@@ -526,6 +544,9 @@ def main():
                         elif menu_index == 1: game_state = "LOVE_WAIT"
                         elif menu_index == 0: game_state = "ATTACK_WAIT"
                         if move_sound: move_sound.play()
+                    elif e.key == pygame.K_x:
+                        pygame.quit()
+                        sys.exit()
                             
                 elif game_state == "ATTACK_WAIT":
                     if e.key == pygame.K_z or e.key == pygame.K_RETURN:
@@ -785,6 +806,7 @@ def main():
                         spawn_timer = 0
                         p7_lanes = [0, 1, 2]
                         random.shuffle(p7_lanes)
+                        
 
             if pattern_timer >= 600:
                 game_state = "MENU"
@@ -901,8 +923,12 @@ def main():
             anim_index = (anim_index + 1) % len(idle_anim_sequence)
             anim_timer = 0
         
+        # 💡 [수정된 부분] 상태에 따라 Y축 위치 다르게 설정하기
         draw_x = WIDTH // 2
-        draw_y = 170
+        if game_state == "DODGE":
+            draw_y = 170          # 공격 중일 때는 위쪽에 배치
+        else:
+            draw_y = HEIGHT // 2  # 공격 중이 아닐 때는 화면 정중앙에 배치
 
         is_hurt = False
         if enemy_hit_timer > 0:
@@ -978,9 +1004,15 @@ def main():
                         heart_y = rect.y + (rect.height - PLAYER_H) // 2
                         pygame.draw.rect(canvas, PLAYER_BLUE, (heart_x, heart_y, PLAYER_W, PLAYER_H))
 
+        # 💡 [여기서부터 수정!] 팝업창이 뜨는 상태들 (공격, 사랑, 회복 등)
         if game_state in ["HEAL_WAIT", "HEAL_SPIN", "HEAL_RESULT", "LOVE_WAIT", "LOVE_RESULT", "ATTACK_WAIT", "ATTACK_RESULT"]:
             roulette_w, roulette_h = 450, 200
-            roulette_rect = pygame.Rect(WIDTH//2 - roulette_w//2, HEIGHT//2 - roulette_h//2, roulette_w, roulette_h)
+            
+            # 💡 [수정된 부분] 팝업창 위치를 화면 중앙에서 하단 메뉴 박스 중앙으로 이동
+            # MENU_BOX_RECT.centery를 기준으로 잡아 상태창과 겹치게 만듭니다.
+            roulette_y = MENU_BOX_RECT.centery - (roulette_h // 2)
+            roulette_rect = pygame.Rect(WIDTH//2 - roulette_w//2, roulette_y, roulette_w, roulette_h)
+            
             pygame.draw.rect(canvas, BLACK, roulette_rect)
             pygame.draw.rect(canvas, WHITE, roulette_rect, BORDER_THICKNESS)
             
