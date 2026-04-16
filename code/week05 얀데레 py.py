@@ -170,7 +170,7 @@ for i in range(4):
 run_anim_sequence = [run_frames[i] for i in [3, 1, 2, 0]]
 
 
-ARENA_W, ARENA_H = 435, 435
+ARENA_W, ARENA_H = 425, 425
 ARENA_X = (WIDTH - ARENA_W) // 2
 ARENA_Y = (HEIGHT - ARENA_H) // 2
 arena_rect = pygame.Rect(ARENA_X, ARENA_Y, ARENA_W, ARENA_H)
@@ -671,7 +671,7 @@ def main():
                         knives.append([rect, dx, dy, face_angle, delay_frames, sx, sy])
                     
             elif current_pattern == 3: 
-                if spawn_timer >= 60:
+                if spawn_timer >= 50:
                     spawn_timer = 0
                     speed = 6
                     K_LONG = 55
