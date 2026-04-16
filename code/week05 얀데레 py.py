@@ -311,7 +311,7 @@ def story_intro_screen():
         ],
         [ [("점심시간, ", WHITE), ("플레이어", PLAYER_BLUE), ("가 점심 먹으러 가던 길.", WHITE)] ],
         [ 
-            [("같은 과에 활기찬 여자아이가 ", WHITE), ("플레이어", PLAYER_BLUE), ("의", WHITE) ],
+            [("같은 과에", WHITE),(" 활기찬 여자아이", YELLOW), ("가 ", WHITE), ("플레이어", PLAYER_BLUE), ("의", WHITE) ],
             [("팔짱을", WHITE),  (" 끼고 같이 점심을 먹으러 가고있다.", WHITE)] 
         ],
         [ [("웃고있는 ", WHITE), ("플레이어", PLAYER_BLUE), ("의 얼굴을 본 ", WHITE), ("얀데레", RED), (".", WHITE)] ],
@@ -921,8 +921,7 @@ def main():
             current_frame_surf.fill((150, 0, 0), special_flags=pygame.BLEND_RGB_ADD)
             
         if game_state == "BAD_ENDING":
-            current_frame_surf.set_alpha(150)
-            current_frame_surf.fill((50, 50, 50, 255), special_flags=pygame.BLEND_RGBA_MULT)
+            current_frame_surf.fill((150, 150, 150, 255), special_flags=pygame.BLEND_RGBA_MULT)
 
         scaled_char = pygame.transform.scale(
             current_frame_surf,
