@@ -806,7 +806,6 @@ def main():
                         spawn_timer = 0
                         p7_lanes = [0, 1, 2]
                         random.shuffle(p7_lanes)
-                        
 
             if pattern_timer >= 600:
                 game_state = "MENU"
@@ -855,7 +854,6 @@ def main():
                             knife[3] = math.degrees(math.atan2(-knife[1], -knife[2]))
                             dx, dy = knife[1], knife[2] 
                             
-                # 💡 위치를 업데이트하는 이 부분이 반드시 else: 안쪽으로 들어와야 합니다!
                 if len(knife) > 5:
                     knife[5] += dx 
                     knife[6] += dy 
@@ -923,12 +921,11 @@ def main():
             anim_index = (anim_index + 1) % len(idle_anim_sequence)
             anim_timer = 0
         
-        # 💡 [수정된 부분] 상태에 따라 Y축 위치 다르게 설정하기
         draw_x = WIDTH // 2
         if game_state == "DODGE":
             draw_y = 170          # 공격 중일 때는 위쪽에 배치
         else:
-            draw_y = HEIGHT // 2  # 공격 중이 아닐 때는 화면 정중앙에 배치
+            draw_y = HEIGHT // 2 - 50  # 공격 중이 아닐 때는 화면 정중앙 약간 위에 배치
 
         is_hurt = False
         if enemy_hit_timer > 0:
@@ -937,7 +934,6 @@ def main():
             is_hurt = True
             enemy_hit_timer -= 1
 
-        # 엔딩 시에는 첫 번째 프레임으로 고정, 평소에는 대기 모션 재생
         if game_state in ["TRUE_ENDING", "BAD_ENDING"]:
             current_frame_surf = idle_anim_sequence[0].copy()
         else:
@@ -979,11 +975,24 @@ def main():
         elif game_state in ["MENU", "HEAL_WAIT", "HEAL_SPIN", "HEAL_RESULT", "LOVE_WAIT", "LOVE_RESULT", "ATTACK_WAIT", "ATTACK_RESULT", "TRUE_ENDING", "BAD_ENDING"]:
             if game_state not in ["TRUE_ENDING", "BAD_ENDING"]:
                 pygame.draw.rect(canvas, WHITE, MENU_BOX_RECT, BORDER_THICKNESS)
-                line1_text = font.render("*상태창*", True, YELLOW)
+                line1_text = font.render("상태창", True, WHITE)
                 canvas.blit(line1_text, (MENU_BOX_RECT.x + 30, MENU_BOX_RECT.y + 30))
 
+                # 💡 메뉴 인덱스에 따라 상태창 중앙에 설명글 띄우기
+                if game_state == "MENU":
+                    menu_descriptions = [
+                        "[공격을 하여 얀데레를 죽이자]",
+                        "[사랑을 주어 공격을 멈추자]",
+                        "[체력 회복하기]"
+                    ]
+                    # 💡 [수정된 부분] font_sub -> font_mid (더 큰 글씨), WHITE -> YELLOW (노란색)
+                    desc_text = font_mid.render(menu_descriptions[menu_index], True, YELLOW)
+                    
+                    desc_rect = desc_text.get_rect(center=(MENU_BOX_RECT.centerx, MENU_BOX_RECT.centery - 10))
+                    canvas.blit(desc_text, desc_rect)
+
                 info_move_text = font_small.render("이동: A(좌) D(우)", True, GRAY)
-                info_select_text = font_small.render("선택: Enter", True, GRAY)
+                info_select_text = font_small.render("선택: Enter / 종료: X", True, GRAY)
                 
                 move_y = MENU_BOX_RECT.bottom - 75
                 select_y = MENU_BOX_RECT.bottom - 45
@@ -1004,12 +1013,8 @@ def main():
                         heart_y = rect.y + (rect.height - PLAYER_H) // 2
                         pygame.draw.rect(canvas, PLAYER_BLUE, (heart_x, heart_y, PLAYER_W, PLAYER_H))
 
-        # 💡 [여기서부터 수정!] 팝업창이 뜨는 상태들 (공격, 사랑, 회복 등)
         if game_state in ["HEAL_WAIT", "HEAL_SPIN", "HEAL_RESULT", "LOVE_WAIT", "LOVE_RESULT", "ATTACK_WAIT", "ATTACK_RESULT"]:
             roulette_w, roulette_h = 450, 200
-            
-            # 💡 [수정된 부분] 팝업창 위치를 화면 중앙에서 하단 메뉴 박스 중앙으로 이동
-            # MENU_BOX_RECT.centery를 기준으로 잡아 상태창과 겹치게 만듭니다.
             roulette_y = MENU_BOX_RECT.centery - (roulette_h // 2)
             roulette_rect = pygame.Rect(WIDTH//2 - roulette_w//2, roulette_y, roulette_w, roulette_h)
             
@@ -1109,7 +1114,7 @@ def main():
             canvas.blit(text2, (ending_box.centerx - text2.get_width() // 2, start_y + text1.get_height() + gap))
             canvas.blit(text3, (ending_box.centerx - text3.get_width() // 2, start_y + text1.get_height() + gap * 2 + text2.get_height()))
 
-        hp_label = font.render("HP: ", True, RED)
+        hp_label = font.render("HP: ", True, PLAYER_BLUE)
         heart_surf = font.render("♥ ", True, PLAYER_BLUE)
         label_w = hp_label.get_width()
         heart_w = heart_surf.get_width()
@@ -1134,6 +1139,5 @@ def main():
         pygame.display.flip()
 
 if __name__ == "__main__":
-    # 메인 게임 시작 전 스토리 인트로 실행
     story_intro_screen()
     main()
