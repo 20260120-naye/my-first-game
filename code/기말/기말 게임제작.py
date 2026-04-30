@@ -24,7 +24,7 @@ display_surface = pygame.Surface((LOGICAL_WIDTH, LOGICAL_HEIGHT))
 # [핵심 추가] 게임 화면만 보여줄 뷰포트(Viewport) 설정
 # 좌우 마진 360px, 상하 마진 90px (양옆이 훨씬 넓음)
 VIEW_MARGIN_X = 320
-VIEW_MARGIN_Y = 60
+VIEW_MARGIN_Y = 70
 VIEW_W = LOGICAL_WIDTH - (VIEW_MARGIN_X * 2)  # 1200
 VIEW_H = LOGICAL_HEIGHT - (VIEW_MARGIN_Y * 2) # 900
 view_surface = pygame.Surface((VIEW_W, VIEW_H))
@@ -33,6 +33,32 @@ current_width, current_height = 1600, 900
 screen = pygame.display.set_mode((current_width, current_height))
 pygame.display.set_caption("단죄의 시간 (Time of Condemnation)")
 clock = pygame.time.Clock()
+
+# ==================== 이미지 자원 관리 ====================
+IMAGES = {}
+
+def load_images():
+    try:
+        # 원본 이미지 딱 한 번만 불러오기
+        naye_base = pygame.image.load("./code/기말/assets/image/나예 기본.png").convert_alpha()
+        naye_surprised = pygame.image.load("./code/기말/assets/image/나예 놀람.png").convert_alpha()
+        naye_fearful = pygame.image.load("./code/기말/assets/image/나예 두려움.png").convert_alpha()
+        naye_sad = pygame.image.load("./code/기말/assets/image/나예 슬픔.png").convert_alpha()
+        naye_happy = pygame.image.load("./code/기말/assets/image/나예 행복.png").convert_alpha()
+        naye_disgusted = pygame.image.load("./code/기말/assets/image/나예 혐오.png").convert_alpha()
+        naye_angry = pygame.image.load("./code/기말/assets/image/나예 화남.png").convert_alpha()
+
+        # 2. 좌측 UI 일러스트용 (크기 250x250) 미리 만들어서 따로 저장!
+        IMAGES['naye_base'] = pygame.transform.scale(naye_base, (1700, 900))
+        IMAGES['naye_surprised'] = pygame.transform.scale(naye_surprised, (1700, 900))
+        IMAGES['naye_fearful'] = pygame.transform.scale(naye_fearful, (1700, 900))
+        IMAGES['naye_sad'] = pygame.transform.scale(naye_sad, (1700, 900))
+        IMAGES['naye_happy'] = pygame.transform.scale(naye_happy, (1700, 900))
+        IMAGES['naye_disgusted'] = pygame.transform.scale(naye_disgusted, (1700, 900))
+        IMAGES['naye_angry'] = pygame.transform.scale(naye_angry, (1700, 900))
+
+    except Exception as e:
+        print(f"이미지 로딩 중 오류 발생: {e}")
 
 # ==================== 게임 전체 상태 정의 ====================
 APP_MAIN_MENU = 0
@@ -187,7 +213,11 @@ class Player:
     def draw(self, surface, cam_x, cam_y):
         # 대쉬 중일 때는 플레이어의 색상이 밝은 청록색으로 변해 시각적인 피드백을 줍니다.
         current_color = (150, 255, 255) if self.is_dashing else PLAYER_COLOR
-        pygame.draw.circle(surface, current_color, (int(self.pos.x - cam_x), int(self.pos.y - cam_y)), self.radius)
+        if 'player' in IMAGES:
+            surface.blit(IMAGES['player'], (int(self.pos.x - cam_x), int(self.pos.y - cam_y)))
+        else:
+            pygame.draw.circle(surface, current_color, (int(self.pos.x - cam_x), int(self.pos.y - cam_y)), self.radius)
+
 class Bullet:
     def __init__(self, x, y, target_x, target_y):
         self.pos = pygame.math.Vector2(x, y)
@@ -242,6 +272,7 @@ def main():
     global current_width, current_height, screen
     load_config()
     update_display(config['display_mode'])
+    load_images()
     
     app_state = APP_MAIN_MENU 
     
@@ -530,13 +561,28 @@ def main():
             map_name_str = MAP_DATA[current_map_idx]['name']
             map_name_surf = large_font.render(f"- {map_name_str} -", True, (255, 255, 255))
             display_surface.blit(map_name_surf, (LOGICAL_WIDTH - map_name_surf.get_width() - 40, 20))
-            
-            # 좌측 여백에 조작법 간략 안내
-            display_surface.blit(font.render("WASD : 이동", True, (100, 100, 100)), (40, 100))
-            display_surface.blit(font.render("좌클릭 : 공격", True, (100, 100, 100)), (40, 140))
-            
-            # 아래 코드를 한 줄 추가해주세요.
-            display_surface.blit(font.render("SPACE : 대쉬", True, (100, 100, 100)), (40, 180))
+
+            # ==================== 좌측 캐릭터 일러스트 렌더링 ====================
+            if 'naye_base' in IMAGES:
+                # [수정] 기존 UI(설정창 등)가 망가지지 않도록 변수명을 illust_x, illust_y로 변경했습니다!
+                illust_x = VIEW_MARGIN_X // 2
+                illust_y = LOGICAL_HEIGHT - 550
+                
+                # 이미지 중심을 찰떡같이 맞추기
+                ui_rect = IMAGES['naye_base'].get_rect(center=(illust_x, illust_y))
+                
+                # 화면에 그리기
+                display_surface.blit(IMAGES['naye_base'], ui_rect)
+                
+                # 캐릭터 이름표 달아주기
+                name_tag = font.render("나예", True, (255, 255, 255))
+                name_rect = name_tag.get_rect(center=(illust_x, ui_rect.bottom + 30))
+                
+                bg_rect = pygame.Rect(0, 0, 90, 40)
+                bg_rect.center = name_rect.center
+                pygame.draw.rect(display_surface, (50, 50, 60), bg_rect, border_radius=5)
+                display_surface.blit(name_tag, name_rect)
+            # =========================================================================
 
             # ==================== 미니맵 렌더링 (아이작 스타일) ====================
             minimap_room_size = 24  # 미니맵 방 하나의 크기
