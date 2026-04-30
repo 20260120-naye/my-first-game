@@ -8,11 +8,13 @@ pygame.init()
 
 # ==================== 한글 폰트 자동 탐색 함수 ====================
 def get_korean_font(size, bold=False):
-    font_names = ['malgungothic', 'apple sd gothic neo', 'applegothic', 'nanumgothic', 'dotum', 'gulim']
+    # 'malgungothic'을 제외하고 다른 기본 한글 폰트를 우선적으로 탐색합니다.
+    font_names = ['nanumgothic', 'apple sd gothic neo', 'applegothic', 'dotum', 'gulim', 'batang']
+    
     for name in font_names:
         if pygame.font.match_font(name):
             return pygame.font.SysFont(name, size, bold=bold)
-    return pygame.font.SysFont(None, size, bold=bold)
+            
 
 # 첫 창을 띄우기 전에 모니터의 실제 최대 해상도를 미리 저장해둡니다.
 info = pygame.display.Info()
@@ -25,7 +27,7 @@ os.environ['SDL_VIDEO_CENTERED'] = '1'
 LOGICAL_WIDTH, LOGICAL_HEIGHT = 1920, 1080
 display_surface = pygame.Surface((LOGICAL_WIDTH, LOGICAL_HEIGHT))
 
-# 2. 실제 물리적 창 크기 초기 설정
+# 2. 실제 물리적 창 크기 (기본값: 1600x900 창 모드)
 current_width, current_height = 1600, 900
 screen = pygame.display.set_mode((current_width, current_height))
 pygame.display.set_caption("단죄의 시간 (Time of Condemnation)")
@@ -66,7 +68,6 @@ def load_config():
         try:
             with open(CONFIG_FILE, "r", encoding="utf-8") as f:
                 loaded = json.load(f)
-                # 딕셔너리 업데이트 (기본값 누락 방지)
                 for k, v in loaded.items():
                     if isinstance(v, dict) and k in config:
                         config[k].update(v)
@@ -139,7 +140,7 @@ class Button:
     def draw(self, surface, center_x, scaled_mouse_pos):
         self.rect.x = center_x + self.rel_x - self.w // 2
         color = self.hover_color if self.rect.collidepoint(scaled_mouse_pos) else self.base_color
-        pygame.draw.rect(surface, color, self.rect, border_radius=8)
+        pygame.draw.rect(surface, color, self.rect, border_radius=10) 
         
         text_surf = self.font.render(self.text, True, (255, 255, 255))
         surface.blit(text_surf, (self.rect.centerx - text_surf.get_width()//2, self.rect.centery - text_surf.get_height()//2))
@@ -212,7 +213,7 @@ class Enemy:
 def update_display(mode):
     global screen, current_width, current_height
     config['display_mode'] = mode
-    save_config() # 화면 모드가 변경되면 즉시 저장
+    save_config()
     
     screen.fill((0, 0, 0))
     pygame.display.flip()
@@ -234,7 +235,6 @@ def update_display(mode):
 def main():
     global current_width, current_height, screen
     
-    # 1. 설정 불러오기 및 디스플레이 적용
     load_config()
     update_display(config['display_mode'])
     
@@ -256,50 +256,47 @@ def main():
     current_tab = "VIDEO"
     waiting_for_key = None
     
-    # 팝업 상태 관리
     confirm_delete_slot = None
     confirm_save_slot = None
 
     # --- 메인 메뉴 버튼 ---
-    menu_btn_start = Button(-710, 660, 200, 60, "새로 시작")
-    menu_btn_continue = Button(-710, 740, 200, 60, "이어하기")
-    menu_btn_settings = Button(-710, 820, 200, 60, "설정")
-    menu_btn_quit = Button(-710, 900, 200, 60, "게임 종료", base_col=(180, 50, 50), hover_col=(220, 80, 80))
+    menu_btn_start = Button(-710, 660, 240, 70, "새로 시작")
+    menu_btn_continue = Button(-710, 740, 240, 70, "이어하기")
+    menu_btn_settings = Button(-710, 820, 240, 70, "설정")
+    menu_btn_quit = Button(-710, 900, 240, 70, "게임 종료", base_col=(180, 50, 50), hover_col=(220, 80, 80))
 
     # --- 설정창 탭 선택 버튼 ---
-    btn_video = Button(-250, 200, 150, 50, "화면 설정")
-    btn_audio = Button(0, 200, 150, 50, "음향 설정")
-    btn_keys = Button(250, 200, 150, 50, "단축키")
+    btn_video = Button(-200, 200, 180, 60, "화면 설정")
+    btn_audio = Button(0, 200, 180, 60, "음향 설정")
+    btn_keys = Button(200, 200, 180, 60, "단축키")
     
     # [1] 화면 탭 버튼
-    btn_window = Button(0, 320, 300, 50, "창 모드 (1600x900)")
-    btn_borderless = Button(0, 390, 300, 50, "테두리 없는 전체화면")
-    btn_fullscreen = Button(0, 460, 300, 50, "독점 전체화면")
+    btn_window = Button(0, 320, 320, 60, "창 모드 (1600x900)")
+    btn_borderless = Button(0, 390, 320, 60, "테두리 없는 전체화면")
+    btn_fullscreen = Button(0, 460, 320, 60, "독점 전체화면")
     
     # [2] 음향 탭 버튼
     btn_vol_down = Button(-100, 310, 60, 60, "-", 40)
     btn_vol_up = Button(100, 310, 60, 60, "+", 40)
-
     btn_combat_vol_down = Button(-100, 440, 60, 60, "-", 40)
     btn_combat_vol_up = Button(100, 440, 60, 60, "+", 40)
-
     btn_voice_vol_down = Button(-100, 570, 60, 60, "-", 40)
     btn_voice_vol_up = Button(100, 570, 60, 60, "+", 40)
     
     # [3] 단축키 탭 버튼 모음
     key_buttons = {
-        'UP': Button(80, 320, 200, 50, ""), 'DOWN': Button(80, 390, 200, 50, ""),
-        'LEFT': Button(80, 460, 200, 50, ""), 'RIGHT': Button(80, 530, 200, 50, "")
+        'UP': Button(80, 320, 220, 60, ""), 'DOWN': Button(80, 390, 220, 60, ""),
+        'LEFT': Button(80, 460, 220, 60, ""), 'RIGHT': Button(80, 530, 220, 60, "")
     }
     key_labels = {
         'UP': "위 (UP):", 'DOWN': "아래 (DOWN):",
         'LEFT': "왼쪽 (LEFT):", 'RIGHT': "오른쪽 (RIGHT):"
     }
 
-    # [수정] 하단 제어 버튼 높이를 60으로 키워 글씨 짤림 완벽 해결
-    btn_close_overlay = Button(0, 680, 240, 60, "닫기", base_col=(80, 80, 90), hover_col=(120, 120, 130))
-    btn_return_main = Button(-130, 680, 240, 60, "나가기", base_col=(180, 50, 50), hover_col=(220, 80, 80))
-    btn_close_settings_game = Button(130, 680, 240, 60, "설정 닫기", base_col=(80, 80, 90), hover_col=(120, 120, 130))
+    # [수정 핵심] 이상한 공백(스페이스바) 제거! 순수 텍스트로 복구
+    btn_close_overlay = Button(0, 680, 260, 70, "닫기", base_col=(80, 80, 90), hover_col=(120, 120, 130))
+    btn_return_main = Button(-140, 680, 260, 70, "나가기", base_col=(180, 50, 50), hover_col=(220, 80, 80))
+    btn_close_settings_game = Button(140, 680, 260, 70, "설정 닫기", base_col=(80, 80, 90), hover_col=(120, 120, 130))
 
     # --- 세이브/로드 슬롯 버튼 ---
     slot_buttons = [
@@ -314,9 +311,9 @@ def main():
     ]
 
     # --- 삭제/저장 확인 팝업창 버튼 ---
-    btn_confirm_yes_del = Button(-100, 450, 150, 60, "예 (삭제)", base_col=(180, 50, 50), hover_col=(220, 80, 80))
-    btn_confirm_yes_save = Button(-100, 450, 150, 60, "예 (저장)", base_col=(60, 150, 60), hover_col=(90, 180, 90))
-    btn_confirm_no = Button(100, 450, 150, 60, "아니오", base_col=(80, 80, 90), hover_col=(120, 120, 130))
+    btn_confirm_yes_del = Button(-120, 450, 200, 70, "예 (삭제)", base_col=(180, 50, 50), hover_col=(220, 80, 80))
+    btn_confirm_yes_save = Button(-120, 450, 200, 70, "예 (저장)", base_col=(60, 150, 60), hover_col=(90, 180, 90))
+    btn_confirm_no = Button(120, 450, 200, 70, "아니오", base_col=(80, 80, 90), hover_col=(120, 120, 130))
 
     running = True
     while running:
@@ -324,7 +321,6 @@ def main():
         scaled_mouse_pos = get_scaled_mouse_pos()
         center_x = LOGICAL_WIDTH // 2
 
-        # ----------------- UI 텍스트 동적 업데이트 -----------------
         for i in range(3):
             slot_key = f"slot_{i+1}"
             if saves_data[slot_key]:
@@ -335,13 +331,11 @@ def main():
             else:
                 slot_buttons[i].text = f"슬롯 {i+1} [비어있음]"
                 slot_buttons[i].base_color = (80, 80, 90)
-        # -----------------------------------------------------------
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
             
-            # 단축키 처리
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     if confirm_delete_slot is not None:
@@ -357,13 +351,12 @@ def main():
                 elif event.key == pygame.K_q and app_state == APP_PLAYING and not current_overlay:
                     current_overlay = 'SAVE'
 
-            # [1] 오버레이(설정/세이브/로드)가 켜져 있을 때의 입력 처리
             if current_overlay:
                 if current_overlay == 'SETTINGS':
                     if waiting_for_key and event.type == pygame.KEYDOWN:
                         if event.key != pygame.K_ESCAPE:
                             config['keys'][waiting_for_key] = event.key
-                            save_config() # 단축키 변경 시 바로 저장
+                            save_config()
                         waiting_for_key = None
                     elif not waiting_for_key:
                         if btn_video.is_clicked(event, scaled_mouse_pos): current_tab = "VIDEO"
@@ -392,7 +385,6 @@ def main():
                             if btn_fullscreen.is_clicked(event, scaled_mouse_pos): update_display('FULLSCREEN')
                             
                         elif current_tab == "AUDIO":
-                            # 볼륨 변경 시 바로 저장
                             if btn_vol_down.is_clicked(event, scaled_mouse_pos): 
                                 config['volume'] = max(0, config['volume'] - 10)
                                 save_config()
@@ -418,7 +410,6 @@ def main():
                             for action, btn in key_buttons.items():
                                 if btn.is_clicked(event, scaled_mouse_pos): waiting_for_key = action
                 
-                # 세이브 & 로드 오버레이 입력 처리
                 elif current_overlay in ['SAVE', 'LOAD']:
                     if confirm_delete_slot is not None:
                         if btn_confirm_yes_del.is_clicked(event, scaled_mouse_pos):
@@ -441,7 +432,7 @@ def main():
                             }
                             write_save_data(saves_data)
                             confirm_save_slot = None
-                            current_overlay = None
+                            current_overlay = None 
                         elif btn_confirm_no.is_clicked(event, scaled_mouse_pos):
                             confirm_save_slot = None
                             
@@ -480,7 +471,6 @@ def main():
                                         current_overlay = None
                                         break
 
-            # [2] 오버레이가 없고 메인 메뉴 상태일 때
             elif app_state == APP_MAIN_MENU:
                 if menu_btn_start.is_clicked(event, scaled_mouse_pos):
                     player = Player()
@@ -496,13 +486,11 @@ def main():
                 elif menu_btn_quit.is_clicked(event, scaled_mouse_pos):
                     running = False
 
-            # [3] 오버레이가 없고 인게임 상태일 때
             elif app_state == APP_PLAYING and room_state in [ROOM_COMBAT, ROOM_CLEARED]:
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     mx, my = scaled_mouse_pos
                     bullets.append(Bullet(player.pos.x, player.pos.y, mx, my))
 
-        # === 게임 로직 업데이트 ===
         if not current_overlay and app_state == APP_PLAYING:
             player.move(dt)
             current_play_time += dt
@@ -534,7 +522,6 @@ def main():
                 for bullet in bullets[:]: bullet.update(dt)
 
 
-        # ==================== 렌더링 (그리기) ====================
         display_surface.fill((0, 0, 0))
 
         if app_state == APP_MAIN_MENU:
@@ -572,7 +559,6 @@ def main():
             ui_text = f"진행 시간: {time_str} | [ESC] 설정 | [Q] 진행상황 저장"
             display_surface.blit(font.render(ui_text, True, (200, 200, 200)), (20, 20))
 
-        # 3. 오버레이(팝업창) 그리기
         if current_overlay:
             overlay_bg = pygame.Surface((LOGICAL_WIDTH, LOGICAL_HEIGHT), pygame.SRCALPHA)
             overlay_bg.fill((0, 0, 0, 180))
@@ -597,7 +583,6 @@ def main():
                     btn_window.draw(display_surface, center_x, scaled_mouse_pos)
                     btn_borderless.draw(display_surface, center_x, scaled_mouse_pos)
                     btn_fullscreen.draw(display_surface, center_x, scaled_mouse_pos)
-                    
                 elif current_tab == "AUDIO":
                     vol_text = font.render(f"마스터 볼륨: {config['volume']}%", True, (255, 255, 255))
                     display_surface.blit(vol_text, (center_x - vol_text.get_width()//2, 270))
@@ -613,7 +598,6 @@ def main():
                     display_surface.blit(voice_vol_text, (center_x - voice_vol_text.get_width()//2, 530))
                     btn_voice_vol_down.draw(display_surface, center_x, scaled_mouse_pos)
                     btn_voice_vol_up.draw(display_surface, center_x, scaled_mouse_pos)
-                    
                 elif current_tab == "KEYS":
                     for action, btn in key_buttons.items():
                         key_name = pygame.key.name(config['keys'][action]).upper()

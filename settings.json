@@ -1,8 +1,8 @@
 {
     "display_mode": "WINDOW",
-    "volume": 80,
-    "combat_volume": 30,
-    "voice_volume": 30,
+    "volume": 50,
+    "combat_volume": 50,
+    "voice_volume": 50,
     "keys": {
         "UP": 119,
         "DOWN": 115,
