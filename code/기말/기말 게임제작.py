@@ -56,7 +56,19 @@ def load_images():
         IMAGES['naye_happy'] = pygame.transform.scale(naye_happy, (1700, 900))
         IMAGES['naye_disgusted'] = pygame.transform.scale(naye_disgusted, (1700, 900))
         IMAGES['naye_angry'] = pygame.transform.scale(naye_angry, (1700, 900))
+        # 3. 인게임 플레이어 대기(Idle) 애니메이션 리스트
+        IMAGES['player_idle'] = []
+        
+        IMAGES['player_idle'] = []
+        
+        # 1. 먼저 3장의 이미지를 각각 불러와서 크기를 맞춥니다.
+        # (파일 경로는 실제 파일 이름에 맞게 수정해 주세요!)
+        idle_1 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/대기 모션_1.png").convert_alpha(), (100, 100))
+        idle_2 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/대기 모션_2.png").convert_alpha(), (100, 100))
+        idle_3 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/대기 모션_3.png").convert_alpha(), (100, 100))
 
+        # 2. 원하는 재생 순서대로 리스트에 쏙쏙 담아줍니다!
+        IMAGES['player_idle'] = [idle_1, idle_2, idle_2, idle_3, idle_3, idle_2, idle_2, idle_1]
     except Exception as e:
         print(f"이미지 로딩 중 오류 발생: {e}")
 
@@ -157,14 +169,18 @@ class Player:
         self.speed = self.normal_speed
         self.radius = 18
         
-        # ==================== 대쉬 관련 변수 추가 ====================
+        # ==================== 대쉬 관련 변수 ====================
         self.is_dashing = False
-        self.dash_speed = 1800            # 대쉬 중 이동 속도 (기존 3배)
-        self.dash_duration = 0.15         # 대쉬 지속 시간 (초)
-        self.dash_cooldown = 1.0          # 대쉬 쿨타임 (초)
-        self.dash_time_left = 0           # 남은 대쉬 시간
-        self.dash_cooldown_left = 0       # 남은 쿨타임
+        self.dash_speed = 1800            
+        self.dash_duration = 0.15         
+        self.dash_cooldown = 1.0          
+        self.dash_time_left = 0           
+        self.dash_cooldown_left = 0       
         self.dash_direction = pygame.math.Vector2(0, 0)
+        
+        # ==================== 애니메이션 관련 변수 ====================
+        self.frame_index = 0.0          # 현재 보여줄 이미지 프레임 (소수점 포함)
+        self.animation_speed = 6.0      # 애니메이션 속도 (1초에 6프레임 전환)
 
     def move(self, dt, room_w, room_h):
         # 1. 쿨타임 감소 로직
@@ -178,13 +194,12 @@ class Player:
                 self.is_dashing = False
                 self.speed = self.normal_speed
             else:
-                # 대쉬 방향으로 강제 이동
                 self.pos += self.dash_direction * self.speed * dt
                 self.pos.x = max(self.radius, min(room_w - self.radius, self.pos.x))
                 self.pos.y = max(self.radius, min(room_h - self.radius, self.pos.y))
-                return # 대쉬 중에는 일반 키보드 입력을 무시하고 리턴
+                return 
 
-        # 3. 일반 이동 로직 (대쉬 중이 아닐 때)
+        # 3. 일반 이동 로직
         keys = pygame.key.get_pressed()
         direction = pygame.math.Vector2(0, 0)
         if keys[config['keys']['UP']]: direction.y -= 1
@@ -195,28 +210,55 @@ class Player:
         if direction.length() > 0: 
             direction = direction.normalize()
 
-        # 4. 대쉬 발동 조건 확인 (스페이스바 입력 + 쿨타임 온 + 이동 중일 때)
+        # 4. 대쉬 발동 조건 확인
         if keys[pygame.K_SPACE] and self.dash_cooldown_left <= 0 and direction.length() > 0:
             self.is_dashing = True
             self.dash_time_left = self.dash_duration
             self.dash_cooldown_left = self.dash_cooldown
             self.speed = self.dash_speed
             self.dash_direction = direction
-            self.pos += self.dash_direction * self.speed * dt # 발동 즉시 이동
+            self.pos += self.dash_direction * self.speed * dt
         else:
             self.pos += direction * self.speed * dt
+            
+        # 5. [추가] 애니메이션 프레임 업데이트 로직
+        if direction.length() == 0 and not self.is_dashing:
+            # 가만히 있을 때(대기 상태) 타이머 증가
+            self.frame_index += self.animation_speed * dt
+        else:
+            # 움직일 때는 일단 프레임을 초기화
+            self.frame_index = 0.0
 
         # 맵 바깥으로 나가지 못하게 보정
         self.pos.x = max(self.radius, min(room_w - self.radius, self.pos.x))
         self.pos.y = max(self.radius, min(room_h - self.radius, self.pos.y))
 
     def draw(self, surface, cam_x, cam_y):
-        # 대쉬 중일 때는 플레이어의 색상이 밝은 청록색으로 변해 시각적인 피드백을 줍니다.
+        draw_x = int(self.pos.x - cam_x)
+        draw_y = int(self.pos.y - cam_y)
+        
+        # 대쉬 중일 때의 컬러 
         current_color = (150, 255, 255) if self.is_dashing else PLAYER_COLOR
-        if 'player' in IMAGES:
-            surface.blit(IMAGES['player'], (int(self.pos.x - cam_x), int(self.pos.y - cam_y)))
+        
+        # [수정] 대기 애니메이션 리스트가 정상적으로 로드되었는지 확인
+        idle_frames = IMAGES.get('player_idle', [])
+        
+        if len(idle_frames) > 0:
+            # 현재 프레임 인덱스에 맞는 이미지를 가져옵니다. (리스트 길이를 넘어가면 0으로 순환)
+            current_frame = int(self.frame_index) % len(idle_frames)
+            img_to_draw = idle_frames[current_frame]
+            
+            surface.blit(img_to_draw, (draw_x - self.radius, draw_y - self.radius))
+            
+            # 대쉬 중일 때 외곽선 효과
+            if self.is_dashing:
+                pygame.draw.circle(surface, current_color, (draw_x, draw_y), self.radius + 2, 3)
+                
+        # 리스트가 비어있고 그냥 'player'라는 단일 이미지만 있으면 호환용으로 그림
+        elif 'player' in IMAGES: 
+            surface.blit(IMAGES['player'], (draw_x - self.radius, draw_y - self.radius))
         else:
-            pygame.draw.circle(surface, current_color, (int(self.pos.x - cam_x), int(self.pos.y - cam_y)), self.radius)
+            pygame.draw.circle(surface, current_color, (draw_x, draw_y), self.radius)
 
 class Bullet:
     def __init__(self, x, y, target_x, target_y):
