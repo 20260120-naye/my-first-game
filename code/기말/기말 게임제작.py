@@ -11,12 +11,8 @@ _cached_fonts = {}
 
 def get_korean_font(size, bold=False):
     cache_key = (size, bold)
+    if cache_key in _cached_fonts: return _cached_fonts[cache_key]
     
-    # 1. 창고에 이미 폰트가 있으면 검색하지 않고 바로 꺼내 쓰기 (로딩 렉 방지)
-    if cache_key in _cached_fonts:
-        return _cached_fonts[cache_key]
-    
-    # 2. 예전에 쓰시던 폰트 리스트 그대로 복구! (처음 딱 한 번만 검색함)
     font_names = ['nanumgothic', 'apple sd gothic neo', 'applegothic', 'dotum', 'gulim', 'batang', 'malgungothic']
     for name in font_names:
         if pygame.font.match_font(name):
@@ -24,7 +20,6 @@ def get_korean_font(size, bold=False):
             _cached_fonts[cache_key] = font 
             return font
             
-    # 한글 폰트가 아예 없을 경우의 기본값
     font = pygame.font.SysFont(None, size, bold=bold)
     _cached_fonts[cache_key] = font
     return font
@@ -36,7 +31,6 @@ os.environ['SDL_VIDEO_CENTERED'] = '1'
 LOGICAL_WIDTH, LOGICAL_HEIGHT = 1920, 1080
 display_surface = pygame.Surface((LOGICAL_WIDTH, LOGICAL_HEIGHT))
 
-# 게임 화면만 보여줄 뷰포트(Viewport) 설정
 VIEW_MARGIN_X = 320
 VIEW_MARGIN_Y = 70
 VIEW_W = LOGICAL_WIDTH - (VIEW_MARGIN_X * 2)  
@@ -52,54 +46,60 @@ clock = pygame.time.Clock()
 IMAGES = {}
 
 def load_images():
+    # 1. 기본 UI 이미지
     try:
         naye_base = pygame.image.load("./code/기말/assets/image/나예 기본.png").convert_alpha()
         IMAGES['naye_base'] = pygame.transform.scale(naye_base, (1700, 900))
-    except Exception as e:
-        print(f"UI 이미지 로딩 오류: {e}")
+    except Exception: pass
+
+    # 2. 대기 및 이동 모션
+    try:
+        IMAGES['player_idle'] = [
+            pygame.transform.scale(pygame.image.load("./code/기말/assets/image/대기 모션_1.png").convert_alpha(), (90, 90)),
+            pygame.transform.scale(pygame.image.load("./code/기말/assets/image/대기 모션_2.png").convert_alpha(), (90, 90)),
+            pygame.transform.scale(pygame.image.load("./code/기말/assets/image/대기 모션_2.png").convert_alpha(), (90, 90)),
+            pygame.transform.scale(pygame.image.load("./code/기말/assets/image/대기 모션_3.png").convert_alpha(), (90, 90))
+        ]
+    except Exception: pass
 
     try:
-        idle_1 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/대기 모션_1.png").convert_alpha(), (90, 90))
-        idle_2 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/대기 모션_2.png").convert_alpha(), (90, 90))
-        idle_3 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/대기 모션_3.png").convert_alpha(), (90, 90))
-        IMAGES['player_idle'] = [idle_1, idle_2, idle_2, idle_3, idle_3, idle_2, idle_2, idle_1]
-    except Exception as e:
-        print(f"대기 모션 로딩 오류: {e}")
+        run_right = [
+            pygame.transform.scale(pygame.image.load(f"./code/기말/assets/image/걷기 모션_{i}.png").convert_alpha(), (80, 80)) for i in range(1, 7)
+        ]
+        IMAGES['player_run_right'] = [run_right[0], run_right[1], run_right[0], run_right[2], run_right[3], run_right[4], run_right[5]]
+        IMAGES['player_run_left'] = [pygame.transform.flip(img, True, False) for img in IMAGES['player_run_right']]
+    except Exception: pass
 
     try:
-        run_1 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/걷기 모션_1.png").convert_alpha(), (80, 80))
-        run_2 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/걷기 모션_2.png").convert_alpha(), (80, 80))
-        run_3 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/걷기 모션_3.png").convert_alpha(), (80, 80))
-        run_4 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/걷기 모션_4.png").convert_alpha(), (80, 80))
-        run_5 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/걷기 모션_5.png").convert_alpha(), (80, 80))
-        run_6 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/걷기 모션_6.png").convert_alpha(), (80, 80))
+        IMAGES['player_run_up'] = [pygame.transform.scale(pygame.image.load(f"./code/기말/assets/image/뒷면 걷기_{i}.png").convert_alpha(), (80, 80)) for i in range(1, 4)] 
+        IMAGES['player_run_down'] = [pygame.transform.scale(pygame.image.load(f"./code/기말/assets/image/정면 걷기_{i}.png").convert_alpha(), (80, 80)) for i in range(1, 6)] 
+    except Exception: pass
 
-        IMAGES['player_run_right'] = [run_1, run_2, run_2, run_1, run_1, run_3, run_3, run_1, run_1, run_4, run_4, run_1, run_1, run_5, run_5, run_1, run_1, run_6, run_6, run_1]
+    # ==================== [핵심 추가] 3. 공격 모션 이미지 ====================
+    try:
+        # [1타 공격 이미지 세팅 (여기에 파일 경로를 맞춰주세요!)]
+        att1_r = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격1_오른쪽.png").convert_alpha(), (120, 120))
+        IMAGES['attack_1_right'] = [att1_r, att1_r] # 애니메이션 프레임이 여러 장이면 리스트에 더 넣으세요!
+        IMAGES['attack_1_left'] = [pygame.transform.flip(img, True, False) for img in IMAGES['attack_1_right']]
         
-        IMAGES['player_run_left'] = []
-        for img in IMAGES['player_run_right']:
-            flipped_img = pygame.transform.flip(img, True, False) 
-            IMAGES['player_run_left'].append(flipped_img)
-    except Exception as e:
-        print(f"좌우 걷기 로딩 오류: {e}")
+        att1_u = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격1_위.png").convert_alpha(), (120, 120))
+        IMAGES['attack_1_up'] = [att1_u]
+        
+        att1_d = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격1_아래.png").convert_alpha(), (120, 120))
+        IMAGES['attack_1_down'] = [att1_d]
 
-    try:
-        up_1 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/뒷면 걷기_1.png").convert_alpha(), (80, 80))
-        up_2 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/뒷면 걷기_2.png").convert_alpha(), (80, 80))
-        up_3 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/뒷면 걷기_3.png").convert_alpha(), (80, 80))
-        IMAGES['player_run_up'] = [up_1, up_2, up_2, up_3, up_3, up_2, up_2, up_1] 
+        # [2타 공격 이미지 세팅]
+        att2_r = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격2_오른쪽.png").convert_alpha(), (120, 120))
+        IMAGES['attack_2_right'] = [att2_r, att2_r]
+        IMAGES['attack_2_left'] = [pygame.transform.flip(img, True, False) for img in IMAGES['attack_2_right']]
+        
+        att2_u = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격2_위.png").convert_alpha(), (120, 120))
+        IMAGES['attack_2_up'] = [att2_u]
+        
+        att2_d = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격2_아래.png").convert_alpha(), (120, 120))
+        IMAGES['attack_2_down'] = [att2_d]
     except Exception as e:
-        print(f"뒷면 걷기 로딩 오류: {e}")
-
-    try:
-        down_1 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/정면 걷기_1.png").convert_alpha(), (80, 80))
-        down_2 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/정면 걷기_2.png").convert_alpha(), (80, 80))
-        down_3 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/정면 걷기_3.png").convert_alpha(), (80, 80))
-        down_4 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/정면 걷기_4.png").convert_alpha(), (75, 75))
-        down_5 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/정면 걷기_5.png").convert_alpha(), (75, 75))
-        IMAGES['player_run_down'] = [down_1, down_2, down_2, down_3, down_3, down_4, down_4, down_5, down_5, down_1] 
-    except Exception as e:
-        print(f"정면 걷기 로딩 오류: {e}")
+        print(f"공격 이미지 아직 없음: {e}")
 
 # ==================== 설정(Config) 및 세이브 ====================
 CONFIG_FILE = "settings.json"
@@ -200,20 +200,67 @@ class Player:
         self.dash_cooldown_left = 0       
         self.dash_direction = pygame.math.Vector2(0, 0)
         
+        # [핵심 추가] 공격(1타, 2타 콤보) 변수
+        self.is_attacking = False
+        self.attack_step = 0       # 1=첫번째 공격, 2=두번째 공격
+        self.attack_timer = 0.0    # 공격 진행 시간
+        self.combo_window = 0.0    # 2타를 누를 수 있는 유예 시간
+        self.attack_effects = []   # 타격 판정 렌더링용
+        
         self.frame_index = 0.0          
         self.animation_speed = 6.0      
         self.facing = 'right'           
-        
         self.afterimages = []
 
-    def move(self, dt, room_w, room_h):
-        if self.dash_cooldown_left > 0:
-            self.dash_cooldown_left -= dt
+    def trigger_attack(self):
+        if self.is_dashing: return False
+        
+        # 1타 공격 발동
+        if not self.is_attacking and self.combo_window <= 0:
+            self.is_attacking = True
+            self.attack_step = 1
+            self.attack_timer = 0.3  # 1타 지속 시간 (0.3초)
+            self.combo_window = 0.6  # 1타 시작 후 0.6초 내에 클릭하면 2타 가능
+            self.frame_index = 0.0
+            return True
             
-        for ghost in self.afterimages:
-            ghost['timer'] -= dt
-        self.afterimages = [g for g in self.afterimages if g['timer'] > 0]
+        # 2타 연계 공격 발동 (유예 시간 안일 때 클릭 시)
+        elif self.combo_window > 0 and self.attack_step == 1:
+            # 1타 모션이 너무 빨리 취소되는 걸 막기 위해 버퍼를 줌
+            if self.attack_timer < 0.15: 
+                self.is_attacking = True
+                self.attack_step = 2
+                self.attack_timer = 0.3  # 2타 지속 시간 (0.3초)
+                self.combo_window = 0.0  # 더 이상 콤보 없음
+                self.frame_index = 0.0
+                return True
+                
+        return False
 
+    def move(self, dt, room_w, room_h):
+        # 타이머 갱신 최우선 처리
+        if self.dash_cooldown_left > 0: self.dash_cooldown_left -= dt
+        
+        for ghost in self.afterimages: ghost['timer'] -= dt
+        self.afterimages = [g for g in self.afterimages if g['timer'] > 0]
+        
+        for effect in self.attack_effects: effect['timer'] -= dt
+        self.attack_effects = [e for e in self.attack_effects if e['timer'] > 0]
+
+        # 공격 타이머 처리
+        if self.attack_timer > 0:
+            self.attack_timer -= dt
+            if self.attack_timer <= 0:
+                self.is_attacking = False
+                
+        if self.combo_window > 0:
+            self.combo_window -= dt
+
+        # 공격 중일 때는 이동 불가 (제자리에 서서 칼질)
+        if self.is_attacking:
+            return
+
+        # 대쉬 진행 로직
         if self.is_dashing:
             self.dash_time_left -= dt
             if self.dash_time_left <= 0:
@@ -225,6 +272,7 @@ class Player:
                 self.pos.y = max(self.radius, min(room_h - self.radius, self.pos.y))
                 return 
 
+        # 일반 이동 로직
         keys = pygame.key.get_pressed()
         direction = pygame.math.Vector2(0, 0)
         if keys[config['keys']['UP']]: direction.y -= 1
@@ -232,9 +280,9 @@ class Player:
         if keys[config['keys']['LEFT']]: direction.x -= 1
         if keys[config['keys']['RIGHT']]: direction.x += 1
 
-        if direction.length() > 0: 
-            direction = direction.normalize()
+        if direction.length() > 0: direction = direction.normalize()
 
+        # 대쉬 트리거
         if keys[pygame.K_SPACE] and self.dash_cooldown_left <= 0 and direction.length() > 0:
             self.is_dashing = True
             self.dash_time_left = self.dash_duration
@@ -250,14 +298,10 @@ class Player:
         else:
             self.frame_index += (self.animation_speed * 1.5) * dt
             
-            if direction.x > 0:
-                self.facing = 'right'
-            elif direction.x < 0:
-                self.facing = 'left'
-            elif direction.y < 0:
-                self.facing = 'up'
-            elif direction.y > 0:
-                self.facing = 'down'
+            if direction.x > 0: self.facing = 'right'
+            elif direction.x < 0: self.facing = 'left'
+            elif direction.y < 0: self.facing = 'up'
+            elif direction.y > 0: self.facing = 'down'
 
         self.pos.x = max(self.radius, min(room_w - self.radius, self.pos.x))
         self.pos.y = max(self.radius, min(room_h - self.radius, self.pos.y))
@@ -267,24 +311,48 @@ class Player:
         draw_y = int(self.pos.y - cam_y)
         
         keys = pygame.key.get_pressed()
-        is_moving = (keys[config['keys']['UP']] or keys[config['keys']['DOWN']] or 
-                     keys[config['keys']['LEFT']] or keys[config['keys']['RIGHT']])
+        is_moving = (keys[config['keys']['UP']] or keys[config['keys']['DOWN']] or keys[config['keys']['LEFT']] or keys[config['keys']['RIGHT']])
         
-        # [핵심] 대쉬 중일 때도 걷기(달리기) 모션을 유지합니다.
         anim_list = []
-        if is_moving or self.is_dashing:
-            if self.facing == 'right': anim_list = IMAGES.get('player_run_right', [])
-            elif self.facing == 'left': anim_list = IMAGES.get('player_run_left', [])
-            elif self.facing == 'up': anim_list = IMAGES.get('player_run_up', [])
-            elif self.facing == 'down': anim_list = IMAGES.get('player_run_down', [])
-        else:
-            anim_list = IMAGES.get('player_idle', [])
+        is_attack_anim = False
+        
+        # [핵심] 공격 중일 때는 공격 이미지를, 아니면 이동/대기 이미지를 가져옵니다.
+        if self.is_attacking:
+            is_attack_anim = True
+            if self.attack_step == 1:
+                if self.facing == 'right': anim_list = IMAGES.get('attack_1_right', [])
+                elif self.facing == 'left': anim_list = IMAGES.get('attack_1_left', [])
+                elif self.facing == 'up': anim_list = IMAGES.get('attack_1_up', [])
+                elif self.facing == 'down': anim_list = IMAGES.get('attack_1_down', [])
+            elif self.attack_step == 2:
+                if self.facing == 'right': anim_list = IMAGES.get('attack_2_right', [])
+                elif self.facing == 'left': anim_list = IMAGES.get('attack_2_left', [])
+                elif self.facing == 'up': anim_list = IMAGES.get('attack_2_up', [])
+                elif self.facing == 'down': anim_list = IMAGES.get('attack_2_down', [])
+                
+        if len(anim_list) == 0:
+            is_attack_anim = False # 공격 이미지가 없으면 임시로 걷기 모션으로 대체
+            if is_moving or self.is_dashing:
+                if self.facing == 'right': anim_list = IMAGES.get('player_run_right', [])
+                elif self.facing == 'left': anim_list = IMAGES.get('player_run_left', [])
+                elif self.facing == 'up': anim_list = IMAGES.get('player_run_up', [])
+                elif self.facing == 'down': anim_list = IMAGES.get('player_run_down', [])
+            else:
+                anim_list = IMAGES.get('player_idle', [])
             
         if len(anim_list) == 0:
             anim_list = IMAGES.get('player_idle', [])
 
         if len(anim_list) > 0:
-            current_frame = int(self.frame_index) % len(anim_list)
+            # 애니메이션 프레임 제어
+            if is_attack_anim:
+                # 공격 애니메이션은 반복(Loop)되지 않고 0.3초 동안 딱 1번만 처음부터 끝까지 재생됩니다.
+                progress = 1.0 - (self.attack_timer / 0.3)
+                current_frame = int(progress * len(anim_list))
+                if current_frame >= len(anim_list): current_frame = len(anim_list) - 1
+            else:
+                current_frame = int(self.frame_index) % len(anim_list)
+                
             img_to_draw = anim_list[current_frame]
             
             if anim_list == IMAGES.get('player_idle', []) and self.facing == 'left':
@@ -301,28 +369,30 @@ class Player:
                 alpha = max(0, min(255, int(120 * (ghost['timer'] / 0.2))))
                 ghost_img = ghost['img'].copy()
                 ghost_img.set_alpha(alpha)
-                
-                gx = int(ghost['pos'].x - cam_x)
-                gy = int(ghost['pos'].y - cam_y)
-                ghost_rect = ghost_img.get_rect(center=(gx, gy))
-                surface.blit(ghost_img, ghost_rect)
+                gx, gy = int(ghost['pos'].x - cam_x), int(ghost['pos'].y - cam_y)
+                surface.blit(ghost_img, ghost_img.get_rect(center=(gx, gy)))
                 
             img_rect = img_to_draw.get_rect(center=(draw_x, draw_y))
             surface.blit(img_to_draw, img_rect)
+            
+            # [시각 효과] 타격 히트박스 시각화 (눈으로 직접 타격 범위를 확인해보세요!)
+            for effect in self.attack_effects:
+                ex = int(effect['pos'].x - cam_x)
+                ey = int(effect['pos'].y - cam_y)
+                pygame.draw.circle(surface, (255, 100, 100), (ex, ey), effect['radius'], 2)
                 
         elif 'player' in IMAGES: 
             surface.blit(IMAGES['player'], (draw_x - self.radius, draw_y - self.radius))
         else:
             pygame.draw.circle(surface, PLAYER_COLOR, (draw_x, draw_y), self.radius)
 
-class Bullet:
+class Bullet: # 적 원거리 공격 등으로 사용하기 위해 코드는 유지
     def __init__(self, x, y, target_x, target_y):
         self.pos = pygame.math.Vector2(x, y)
         self.speed = 1200
         self.radius = 9
         direction = pygame.math.Vector2(target_x - x, target_y - y)
         self.direction = direction.normalize() if direction.length() > 0 else pygame.math.Vector2(1, 0)
-
     def update(self, dt): self.pos += self.direction * self.speed * dt
     def draw(self, surface, cam_x, cam_y):
         pygame.draw.circle(surface, BULLET_COLOR, (int(self.pos.x - cam_x), int(self.pos.y - cam_y)), self.radius)
@@ -337,12 +407,10 @@ class Enemy:
         else:
             self.speed, self.radius, self.hp, self.max_hp = 270, 18, 5, 5 
             self.color = ENEMY_COLOR
-
     def update(self, dt, target_pos):
         direction = target_pos - self.pos
         if direction.length() > 0: direction = direction.normalize()
         self.pos += direction * self.speed * dt
-
     def draw(self, surface, cam_x, cam_y):
         draw_x, draw_y = int(self.pos.x - cam_x), int(self.pos.y - cam_y)
         pygame.draw.circle(surface, self.color, (draw_x, draw_y), self.radius)
@@ -381,7 +449,6 @@ def main():
     load_images()
     
     app_state = APP_MAIN_MENU 
-    
     current_map_idx = 0
     cleared_rooms = [False] * len(MAP_DATA)
     cols, rows = MAP_DATA[0]['cols'], MAP_DATA[0]['rows']
@@ -481,17 +548,21 @@ def main():
                             if btn_borderless.is_clicked(event, scaled_mouse_pos): update_display('BORDERLESS')
                             if btn_fullscreen.is_clicked(event, scaled_mouse_pos): update_display('FULLSCREEN')
                         elif current_tab == "AUDIO":
-                            if btn_vol_down.is_clicked(event, scaled_mouse_pos): config['volume'] = max(0, config['volume'] - 10); save_config()
-                            if btn_vol_up.is_clicked(event, scaled_mouse_pos): config['volume'] = min(100, config['volume'] + 10); save_config()
-                            if btn_combat_vol_down.is_clicked(event, scaled_mouse_pos): config['combat_volume'] = max(0, config['combat_volume'] - 10); save_config()
-                            if btn_combat_vol_up.is_clicked(event, scaled_mouse_pos): config['combat_volume'] = min(100, config['combat_volume'] + 10); save_config()
-                            if btn_voice_vol_down.is_clicked(event, scaled_mouse_pos): config['voice_volume'] = max(0, config['voice_volume'] - 10); save_config()
-                            if btn_voice_vol_up.is_clicked(event, scaled_mouse_pos): config['voice_volume'] = min(100, config['voice_volume'] + 10); save_config()
+                            txt1 = font.render(f"마스터 볼륨: {config['volume']}%", True, (255, 255, 255))
+                            display_surface.blit(txt1, (center_x - txt1.get_width()//2, 275))
+                            btn_vol_down.draw(display_surface, center_x, scaled_mouse_pos); btn_vol_up.draw(display_surface, center_x, scaled_mouse_pos)
+                            
+                            txt2 = font.render(f"전투 볼륨: {config['combat_volume']}%", True, (255, 255, 255))
+                            display_surface.blit(txt2, (center_x - txt2.get_width()//2, 405))
+                            btn_combat_vol_down.draw(display_surface, center_x, scaled_mouse_pos); btn_combat_vol_up.draw(display_surface, center_x, scaled_mouse_pos)
+                            
+                            txt3 = font.render(f"음성 볼륨: {config['voice_volume']}%", True, (255, 255, 255))
+                            display_surface.blit(txt3, (center_x - txt3.get_width()//2, 535))
+                            btn_voice_vol_down.draw(display_surface, center_x, scaled_mouse_pos); btn_voice_vol_up.draw(display_surface, center_x, scaled_mouse_pos)
                         elif current_tab == "KEYS":
                             for action, btn in key_buttons.items():
                                 if btn.is_clicked(event, scaled_mouse_pos): waiting_for_key = action
 
-                # [완벽 수정] SAVE/LOAD 클릭 이벤트 검사부 (화면 그리는 코드 일절 없음)
                 elif current_overlay in ['SAVE', 'LOAD']:
                     if confirm_delete_slot:
                         if btn_confirm_yes_del.is_clicked(event, scaled_mouse_pos):
@@ -551,13 +622,34 @@ def main():
                 elif menu_btn_settings.is_clicked(event, scaled_mouse_pos): current_overlay = 'SETTINGS'
                 elif menu_btn_quit.is_clicked(event, scaled_mouse_pos): running = False
 
+            # [핵심] 좌클릭 시 총알 발사 대신 근접 콤보 공격!
             elif app_state == APP_PLAYING and room_state in [ROOM_COMBAT, ROOM_CLEARED]:
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     mx, my = scaled_mouse_pos
                     if VIEW_MARGIN_X <= mx <= VIEW_MARGIN_X + VIEW_W and VIEW_MARGIN_Y <= my <= VIEW_MARGIN_Y + VIEW_H:
-                        target_x = mx - VIEW_MARGIN_X + camera_x
-                        target_y = my - VIEW_MARGIN_Y + camera_y
-                        bullets.append(Bullet(player.pos.x, player.pos.y, target_x, target_y))
+                        
+                        if player.trigger_attack():
+                            # 공격 범위(Hitbox) 계산: 바라보는 방향 바로 앞 60px
+                            offset_dist = 60
+                            hx, hy = player.pos.x, player.pos.y
+                            if player.facing == 'right': hx += offset_dist
+                            elif player.facing == 'left': hx -= offset_dist
+                            elif player.facing == 'up': hy -= offset_dist
+                            elif player.facing == 'down': hy += offset_dist
+                            
+                            hitbox_pos = pygame.math.Vector2(hx, hy)
+                            hitbox_radius = 50 
+                            
+                            # 시각 효과용 데이터 저장 (0.15초 동안 빨간 원 출력)
+                            player.attack_effects.append({'pos': hitbox_pos, 'radius': hitbox_radius, 'timer': 0.15})
+                            
+                            # 적 타격 로직 (2타일 땐 데미지를 2씩 줌)
+                            for enemy in enemies[:]:
+                                if hitbox_pos.distance_to(enemy.pos) < hitbox_radius + enemy.radius:
+                                    dmg = 2 if player.attack_step == 2 else 1
+                                    enemy.hp -= dmg
+                                    if enemy.hp <= 0:
+                                        enemies.remove(enemy)
 
         # ==================== 게임 로직 처리 ====================
         if not current_overlay and app_state == APP_PLAYING:
@@ -710,7 +802,6 @@ def main():
                 if is_current:
                     pygame.draw.circle(display_surface, PLAYER_COLOR, (rect_x + minimap_room_size//2, rect_y + minimap_room_size//2), 5)
 
-        # [완벽 수정] 화면을 그려주는 렌더링 부 (SAVE/LOAD)
         if current_overlay:
             overlay_bg = pygame.Surface((LOGICAL_WIDTH, LOGICAL_HEIGHT), pygame.SRCALPHA)
             overlay_bg.fill((0, 0, 0, 180)); display_surface.blit(overlay_bg, (0, 0))
