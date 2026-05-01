@@ -108,7 +108,7 @@ def load_images():
         att1_3 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 오_왼_3.png").convert_alpha(), (220, 220))
         att1_4 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 오_왼_4.png").convert_alpha(), (220, 220))
         
-        IMAGES['attack_1_right'] = [att1_1, att1_2, att1_2, att1_3, att1_3, att1_4, att1_4,]
+        IMAGES['attack_1_right'] = [att1_1, att1_1, att1_2,  att1_3, att1_4, att1_4]
         
         IMAGES['attack_1_left'] = [pygame.transform.flip(img, True, False) for img in IMAGES['attack_1_right']]
         IMAGES['attack_1_up'] = [pygame.transform.rotate(img, 90) for img in IMAGES['attack_1_right']]
@@ -119,7 +119,7 @@ def load_images():
         att2_3 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 왼_오_3.png").convert_alpha(), (220, 220))
         att2_4 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 왼_오_4.png").convert_alpha(), (220, 220))
         
-        IMAGES['attack_2_right'] = [att2_1, att2_2, att2_2, att2_3, att2_3, att2_4, att2_4,]
+        IMAGES['attack_2_right'] = [att2_1, att2_1, att2_2, att2_3, att2_4, att2_4]
         
         IMAGES['attack_2_left'] = [pygame.transform.flip(img, True, False) for img in IMAGES['attack_2_right']]
         IMAGES['attack_2_up'] = [pygame.transform.rotate(img, 90) for img in IMAGES['attack_2_right']]
@@ -214,6 +214,11 @@ class Button:
 # ==================== 게임 객체 ====================
 class Player:
     def __init__(self, room_w, room_h):
+
+        self.move_lock_timer = 0.0 
+        self.attack_cooldown_timer = 0.0 
+        self.pose_hold_timer = 0.0   # 👈 [추가] 공격 후 자세 유지 1초 타이머
+        
         self.pos = pygame.math.Vector2(room_w // 2, room_h - 90)
         self.normal_speed = 600
         self.speed = self.normal_speed
@@ -246,7 +251,7 @@ class Player:
         if not self.is_attacking and self.combo_window <= 0:
             self.is_attacking = True
             self.attack_step = 1
-            self.attack_timer = 0.4   # [속도 조절] 0.4초
+            self.attack_timer = 0.3   # [속도 조절] 0.4초
             self.combo_window = 0.8   
             self.frame_index = 0.0
             self.move_lock_timer = 0.15 
@@ -256,7 +261,7 @@ class Player:
             if self.attack_timer < 0.25: 
                 self.is_attacking = True
                 self.attack_step = 2
-                self.attack_timer = 0.4   # [속도 조절] 0.8초
+                self.attack_timer = 0.3   # [속도 조절] 0.8초
                 self.combo_window = 0.0  
                 self.frame_index = 0.0
                 self.move_lock_timer = 0.15 
@@ -266,9 +271,11 @@ class Player:
         return False
 
     def move(self, dt, room_w, room_h, target_x, target_y):
+        # 타이머 업데이트
         if self.dash_cooldown_left > 0: self.dash_cooldown_left -= dt
         if self.move_lock_timer > 0: self.move_lock_timer -= dt
         if self.attack_cooldown_timer > 0: self.attack_cooldown_timer -= dt
+        if self.pose_hold_timer > 0: self.pose_hold_timer -= dt  # 👈 [추가]
             
         for ghost in self.afterimages: ghost['timer'] -= dt
         self.afterimages = [g for g in self.afterimages if g['timer'] > 0]
@@ -277,27 +284,21 @@ class Player:
             self.attack_timer -= dt
             if self.attack_timer <= 0:
                 self.is_attacking = False
+                self.pose_hold_timer = 0.5  # 👈 [추가] 공격 종료 시 0.5초 동안 자세 유지 세팅
                 
         if self.combo_window > 0:
             self.combo_window -= dt
 
-        dx = target_x - self.pos.x
-        dy = target_y - self.pos.y
-        if abs(dx) > abs(dy):
-            self.facing = 'right' if dx > 0 else 'left'
-        else:
-            self.facing = 'down' if dy > 0 else 'up'
-
-        if self.is_dashing:
-            self.dash_time_left -= dt
-            if self.dash_time_left <= 0:
-                self.is_dashing = False
-                self.speed = self.normal_speed
+        # 👇 [핵심 수정] 공격 중이거나 0.5초 자세 유지 중일 때는 마우스 쪽으로 시선을 안 돌림!
+        if not self.is_attacking and self.pose_hold_timer <= 0:
+            dx = target_x - self.pos.x
+            dy = target_y - self.pos.y
+            if abs(dx) > abs(dy):
+                self.facing = 'right' if dx > 0 else 'left'
             else:
-                self.pos += self.dash_direction * self.speed * dt
-                self.pos.x = max(self.radius, min(room_w - self.radius, self.pos.x))
-                self.pos.y = max(self.radius, min(room_h - self.radius, self.pos.y))
-                return 
+                self.facing = 'down' if dy > 0 else 'up'
+
+        # ... (대쉬 처리 부분 그대로 유지) ...
 
         keys = pygame.key.get_pressed()
         direction = pygame.math.Vector2(0, 0)
@@ -310,6 +311,9 @@ class Player:
 
         if direction.length() > 0: 
             direction = direction.normalize()
+            self.pose_hold_timer = 0.0  # 👈 [추가] 이동 키를 누르면 1초 유지가 즉시 풀리고 걷기 시작
+
+        # ... (나머지 이동 로직 그대로 유지) ...
 
         if keys[pygame.K_SPACE] and self.dash_cooldown_left <= 0 and direction.length() > 0 and self.move_lock_timer <= 0:
             self.is_dashing = True
@@ -347,7 +351,8 @@ class Player:
             elif self.facing == 'up': base_anim_list = IMAGES.get('player_run_up', [])
             elif self.facing == 'down': base_anim_list = IMAGES.get('player_run_down', [])
         
-        elif self.is_attacking or self.move_lock_timer > 0 or self.attack_cooldown_timer > 0:
+        # 👇 [수정] 맨 끝에 `or self.pose_hold_timer > 0` 조건을 추가해 줍니다.
+        elif self.is_attacking or self.move_lock_timer > 0 or self.attack_cooldown_timer > 0 or self.pose_hold_timer > 0:
             run_anim = []
             if self.facing == 'right': run_anim = IMAGES.get('player_run_right', [])
             elif self.facing == 'left': run_anim = IMAGES.get('player_run_left', [])
