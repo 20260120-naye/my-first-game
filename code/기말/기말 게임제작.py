@@ -59,8 +59,6 @@ def load_images():
         # 3. 인게임 플레이어 대기(Idle) 애니메이션 리스트
         IMAGES['player_idle'] = []
         
-        IMAGES['player_idle'] = []
-        
         # 1. 먼저 3장의 이미지를 각각 불러와서 크기를 맞춥니다.
         # (파일 경로는 실제 파일 이름에 맞게 수정해 주세요!)
         idle_1 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/대기 모션_1.png").convert_alpha(), (100, 100))
