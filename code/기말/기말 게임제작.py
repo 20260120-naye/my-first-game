@@ -56,19 +56,58 @@ def load_images():
         IMAGES['naye_happy'] = pygame.transform.scale(naye_happy, (1700, 900))
         IMAGES['naye_disgusted'] = pygame.transform.scale(naye_disgusted, (1700, 900))
         IMAGES['naye_angry'] = pygame.transform.scale(naye_angry, (1700, 900))
-        # 3. 인게임 플레이어 대기(Idle) 애니메이션 리스트
-        IMAGES['player_idle'] = []
         
-        # 1. 먼저 3장의 이미지를 각각 불러와서 크기를 맞춥니다.
-        # (파일 경로는 실제 파일 이름에 맞게 수정해 주세요!)
-        idle_1 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/대기 모션_1.png").convert_alpha(), (100, 100))
-        idle_2 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/대기 모션_2.png").convert_alpha(), (100, 100))
-        idle_3 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/대기 모션_3.png").convert_alpha(), (100, 100))
+        # 3. 인게임 플레이어 대기(Idle) 애니메이션 리스트
+        idle_1 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/대기 모션_1.png").convert_alpha(), (90, 90))
+        idle_2 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/대기 모션_2.png").convert_alpha(), (90, 90))
+        idle_3 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/대기 모션_3.png").convert_alpha(), (90, 90))
 
-        # 2. 원하는 재생 순서대로 리스트에 쏙쏙 담아줍니다!
+        # 원하는 재생 순서대로 리스트에 쏙쏙 담아줍니다!
         IMAGES['player_idle'] = [idle_1, idle_2, idle_2, idle_3, idle_3, idle_2, idle_2, idle_1]
+
+        # ==================== 4. 걷기(Run) 모션 커스텀 순서 및 좌우반전 ====================
+        
+        # 4-1. 걷기 이미지들을 각각 불러와서 크기 맞추기
+        run_1 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/걷기 모션_1.png").convert_alpha(), (80, 80))
+        run_2 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/걷기 모션_2.png").convert_alpha(), (80, 80))
+        run_3 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/걷기 모션_3.png").convert_alpha(), (80, 80))
+        run_4 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/걷기 모션_4.png").convert_alpha(), (80, 80))
+        run_5 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/걷기 모션_5.png").convert_alpha(), (80, 80))
+        run_6 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/걷기 모션_6.png").convert_alpha(), (80, 80))
+
+        # 4-2. 오른쪽 걷기 재생 순서 리스트 만들기
+        IMAGES['player_run_right'] = [run_1, run_2, run_2, run_1, run_1, run_3, run_3, run_1, run_1, run_4, run_4, run_1, run_1, run_5, run_5, run_1, run_1, run_6, run_6, run_1]
+        
+        # 4-3. 파이게임 좌우반전 기능으로 왼쪽 걷기 리스트 자동 생성
+        IMAGES['player_run_left'] = []
+        for img in IMAGES['player_run_right']:
+            flipped_img = pygame.transform.flip(img, True, False) 
+            IMAGES['player_run_left'].append(flipped_img)
+
     except Exception as e:
-        print(f"이미지 로딩 중 오류 발생: {e}")
+        print(f"기본 이미지 로딩 중 오류 발생: {e}")
+
+    # ==================== 5. 상하(Up/Down) 걷기 모션 추가 ====================
+    # 위아래 이미지가 없어도 오류로 튕기지 않게 별도의 try-except로 묶습니다.
+    try:
+        # 파일 경로나 이름, 그리고 배열 순서는 이미지를 추가하신 뒤에 자유롭게 변경하세요!
+        up_1 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/뒷면 걷기_1.png").convert_alpha(), (80, 80))
+        up_2 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/뒷면 걷기_2.png").convert_alpha(), (80, 80))
+        up_3 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/뒷면 걷기_3.png").convert_alpha(), (80, 80))
+        IMAGES['player_run_up'] = [up_1, up_2, up_2, up_3, up_3, up_2, up_2, up_1] # 원하는 순서 배치
+    except Exception:
+        IMAGES['player_run_up'] = [] # 이미지가 없으면 빈 리스트로 둠
+
+    try:
+        down_1 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/정면 걷기_1.png").convert_alpha(), (80, 80))
+        down_2 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/정면 걷기_2.png").convert_alpha(), (80, 80))
+        down_3 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/정면 걷기_3.png").convert_alpha(), (80, 80))
+        down_4 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/정면 걷기_4.png").convert_alpha(), (75, 75))
+        down_5 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/정면 걷기_5.png").convert_alpha(), (75, 75))
+        IMAGES['player_run_down'] = [down_1, down_2, down_2, down_3, down_3, down_4, down_4, down_5, down_5, down_1,] # 원하는 순서 배치
+    except Exception:
+        IMAGES['player_run_down'] = []
+
 
 # ==================== 게임 전체 상태 정의 ====================
 APP_MAIN_MENU = 0
@@ -177,8 +216,9 @@ class Player:
         self.dash_direction = pygame.math.Vector2(0, 0)
         
         # ==================== 애니메이션 관련 변수 ====================
-        self.frame_index = 0.0          # 현재 보여줄 이미지 프레임 (소수점 포함)
-        self.animation_speed = 6.0      # 애니메이션 속도 (1초에 6프레임 전환)
+        self.frame_index = 0.0          # 현재 보여줄 이미지 프레임
+        self.animation_speed = 6.0      # 애니메이션 속도
+        self.facing = 'right'           # 캐릭터가 바라보는 방향 기억 (up, down, left, right)
 
     def move(self, dt, room_w, room_h):
         # 1. 쿨타임 감소 로직
@@ -219,13 +259,23 @@ class Player:
         else:
             self.pos += direction * self.speed * dt
             
-        # 5. [추가] 애니메이션 프레임 업데이트 로직
+        # 5. [수정] 애니메이션 방향 및 우선순위 처리
         if direction.length() == 0 and not self.is_dashing:
-            # 가만히 있을 때(대기 상태) 타이머 증가
+            # 가만히 있을 때(대기 상태)
             self.frame_index += self.animation_speed * dt
         else:
-            # 움직일 때는 일단 프레임을 초기화
-            self.frame_index = 0.0
+            # 움직일 때 속도 1.5배
+            self.frame_index += (self.animation_speed * 1.5) * dt
+            
+            # W(위/아래)와 A/D(좌/우)가 동시 입력될 경우 좌/우를 최우선으로 보여줍니다.
+            if direction.x > 0:
+                self.facing = 'right'
+            elif direction.x < 0:
+                self.facing = 'left'
+            elif direction.y < 0:
+                self.facing = 'up'
+            elif direction.y > 0:
+                self.facing = 'down'
 
         # 맵 바깥으로 나가지 못하게 보정
         self.pos.x = max(self.radius, min(room_w - self.radius, self.pos.x))
@@ -234,25 +284,50 @@ class Player:
     def draw(self, surface, cam_x, cam_y):
         draw_x = int(self.pos.x - cam_x)
         draw_y = int(self.pos.y - cam_y)
-        
-        # 대쉬 중일 때의 컬러 
         current_color = (150, 255, 255) if self.is_dashing else PLAYER_COLOR
         
-        # [수정] 대기 애니메이션 리스트가 정상적으로 로드되었는지 확인
-        idle_frames = IMAGES.get('player_idle', [])
+        keys = pygame.key.get_pressed()
+        is_moving = (keys[config['keys']['UP']] or keys[config['keys']['DOWN']] or 
+                     keys[config['keys']['LEFT']] or keys[config['keys']['RIGHT']])
         
-        if len(idle_frames) > 0:
-            # 현재 프레임 인덱스에 맞는 이미지를 가져옵니다. (리스트 길이를 넘어가면 0으로 순환)
-            current_frame = int(self.frame_index) % len(idle_frames)
-            img_to_draw = idle_frames[current_frame]
+        # [핵심] 4방향에 맞는 애니메이션 리스트 꺼내기
+        anim_list = []
+        if is_moving and not self.is_dashing:
+            if self.facing == 'right':
+                anim_list = IMAGES.get('player_run_right', [])
+            elif self.facing == 'left':
+                anim_list = IMAGES.get('player_run_left', [])
+            elif self.facing == 'up':
+                anim_list = IMAGES.get('player_run_up', [])
+            elif self.facing == 'down':
+                anim_list = IMAGES.get('player_run_down', [])
+        else:
+            anim_list = IMAGES.get('player_idle', [])
             
-            surface.blit(img_to_draw, (draw_x - self.radius, draw_y - self.radius))
+        # 안전장치: 불러온 리스트가 비어있다면 대기 모션으로 대체
+        if len(anim_list) == 0:
+            anim_list = IMAGES.get('player_idle', [])
+
+        # 화면에 그리기
+        if len(anim_list) > 0:
+            current_frame = int(self.frame_index) % len(anim_list)
+            img_to_draw = anim_list[current_frame]
+            
+            # 대기 상태일 때, 왼쪽을 보고 서 있다면 좌우반전시켜서 그려줍니다.
+            # (만약 위/아래를 보고 대기하는 이미지가 따로 있다면 이 로직을 더 확장할 수도 있습니다)
+            # (중략...)
+            if not is_moving and self.facing == 'left':
+                img_to_draw = pygame.transform.flip(img_to_draw, True, False)
+                
+            # ✨ 마법의 코드: 이미지의 '정중앙(center)'을 캐릭터의 실제 위치(draw_x, draw_y)에 맞춤!
+            img_rect = img_to_draw.get_rect(center=(draw_x, draw_y))
+            surface.blit(img_to_draw, img_rect)
             
             # 대쉬 중일 때 외곽선 효과
             if self.is_dashing:
                 pygame.draw.circle(surface, current_color, (draw_x, draw_y), self.radius + 2, 3)
                 
-        # 리스트가 비어있고 그냥 'player'라는 단일 이미지만 있으면 호환용으로 그림
+        # 이미지가 하나도 로드 안 됐을 때를 대비한 백업 드로잉
         elif 'player' in IMAGES: 
             surface.blit(IMAGES['player'], (draw_x - self.radius, draw_y - self.radius))
         else:
@@ -506,7 +581,6 @@ def main():
             else: camera_y = -(VIEW_H - room_h) // 2
 
             # 전투 진입 인식 (아직 클리어하지 않은 방일 경우에만)
-            # 전투 진입 인식 (아직 클리어하지 않은 방일 경우에만)
             if room_state == ROOM_WAITING:
                 if not cleared_rooms[current_map_idx]: # 플레이어 위치 조건(y < room_h - 300) 삭제
                     room_state = ROOM_COMBAT
@@ -604,7 +678,6 @@ def main():
 
             # ==================== 좌측 캐릭터 일러스트 렌더링 ====================
             if 'naye_base' in IMAGES:
-                # [수정] 기존 UI(설정창 등)가 망가지지 않도록 변수명을 illust_x, illust_y로 변경했습니다!
                 illust_x = VIEW_MARGIN_X // 2
                 illust_y = LOGICAL_HEIGHT - 550
                 
