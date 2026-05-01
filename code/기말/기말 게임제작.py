@@ -101,25 +101,25 @@ def load_images():
     except Exception as e:
         print(f"정면 걷기 로딩 오류: {e}")
 
-    # ==================== 3. 공격 모션 이미지 1.5배 스케일업 ====================
+    # ==================== 3. 공격 모션 이미지 (220 스케일업) ====================
     try:
-        att1_1 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 오_왼_1.png").convert_alpha(), (180, 180))
-        att1_2 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 오_왼_2.png").convert_alpha(), (180, 180))
-        att1_3 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 오_왼_3.png").convert_alpha(), (180, 180))
-        att1_4 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 오_왼_4.png").convert_alpha(), (180, 180))
+        att1_1 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 오_왼_1.png").convert_alpha(), (220, 220))
+        att1_2 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 오_왼_2.png").convert_alpha(), (220, 220))
+        att1_3 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 오_왼_3.png").convert_alpha(), (220, 220))
+        att1_4 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 오_왼_4.png").convert_alpha(), (220, 220))
         
-        IMAGES['attack_1_right'] = [att1_1, att1_2, att1_3, att1_4]
+        IMAGES['attack_1_right'] = [att1_1, att1_2, att1_2, att1_3, att1_3, att1_4, att1_4,]
         
         IMAGES['attack_1_left'] = [pygame.transform.flip(img, True, False) for img in IMAGES['attack_1_right']]
         IMAGES['attack_1_up'] = [pygame.transform.rotate(img, 90) for img in IMAGES['attack_1_right']]
         IMAGES['attack_1_down'] = [pygame.transform.rotate(img, -90) for img in IMAGES['attack_1_right']]
 
-        att2_1 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 왼_오_1.png").convert_alpha(), (180, 180))
-        att2_2 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 왼_오_2.png").convert_alpha(), (180, 180))
-        att2_3 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 왼_오_3.png").convert_alpha(), (180, 180))
-        att2_4 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 왼_오_4.png").convert_alpha(), (180, 180))
+        att2_1 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 왼_오_1.png").convert_alpha(), (220, 220))
+        att2_2 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 왼_오_2.png").convert_alpha(), (220, 220))
+        att2_3 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 왼_오_3.png").convert_alpha(), (220, 220))
+        att2_4 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 왼_오_4.png").convert_alpha(), (220, 220))
         
-        IMAGES['attack_2_right'] = [att2_1, att2_2, att2_3, att2_4]
+        IMAGES['attack_2_right'] = [att2_1, att2_2, att2_2, att2_3, att2_3, att2_4, att2_4,]
         
         IMAGES['attack_2_left'] = [pygame.transform.flip(img, True, False) for img in IMAGES['attack_2_right']]
         IMAGES['attack_2_up'] = [pygame.transform.rotate(img, 90) for img in IMAGES['attack_2_right']]
@@ -233,7 +233,6 @@ class Player:
         self.combo_window = 0.0    
         
         self.move_lock_timer = 0.0 
-        # [핵심] 공격 후 자세 유지를 위한 쿨타임 변수
         self.attack_cooldown_timer = 0.0 
         
         self.frame_index = 0.0          
@@ -242,33 +241,31 @@ class Player:
         self.afterimages = []
 
     def trigger_attack(self):
-        # 쿨타임 중이거나 대쉬 중이면 공격 불가
         if self.is_dashing or self.attack_cooldown_timer > 0: return False
         
         if not self.is_attacking and self.combo_window <= 0:
             self.is_attacking = True
             self.attack_step = 1
-            self.attack_timer = 0.4   # [속도 조절] 0.4초 동안 부드럽게 1타 진행
-            self.combo_window = 0.8   # 콤보 유예 시간 증가
+            self.attack_timer = 0.4   # [속도 조절] 0.4초
+            self.combo_window = 0.8   
             self.frame_index = 0.0
             self.move_lock_timer = 0.15 
             return True
             
         elif self.combo_window > 0 and self.attack_step == 1:
-            if self.attack_timer < 0.25: # [속도 조절] 1타가 절반 진행되었을 때 2타 예약
+            if self.attack_timer < 0.25: 
                 self.is_attacking = True
                 self.attack_step = 2
-                self.attack_timer = 0.4   # [속도 조절] 0.4초 동안 부드럽게 2타 진행
+                self.attack_timer = 0.4   # [속도 조절] 0.8초
                 self.combo_window = 0.0  
                 self.frame_index = 0.0
                 self.move_lock_timer = 0.15 
-                self.attack_cooldown_timer = 0.3 # 2타 후 0.3초간 자세 유지 (깜빡임 방지)
+                self.attack_cooldown_timer = 0.3 
                 return True
                 
         return False
 
     def move(self, dt, room_w, room_h, target_x, target_y):
-        # 타이머 업데이트
         if self.dash_cooldown_left > 0: self.dash_cooldown_left -= dt
         if self.move_lock_timer > 0: self.move_lock_timer -= dt
         if self.attack_cooldown_timer > 0: self.attack_cooldown_timer -= dt
@@ -284,7 +281,6 @@ class Player:
         if self.combo_window > 0:
             self.combo_window -= dt
 
-        # 마우스 커서를 바라보게 함
         dx = target_x - self.pos.x
         dy = target_y - self.pos.y
         if abs(dx) > abs(dy):
@@ -351,7 +347,6 @@ class Player:
             elif self.facing == 'up': base_anim_list = IMAGES.get('player_run_up', [])
             elif self.facing == 'down': base_anim_list = IMAGES.get('player_run_down', [])
         
-        # [핵심] 공격 중이거나, 자세를 잡는 쿨타임 중일 때는 무조건 노려보는 첫 프레임 강제!
         elif self.is_attacking or self.move_lock_timer > 0 or self.attack_cooldown_timer > 0:
             run_anim = []
             if self.facing == 'right': run_anim = IMAGES.get('player_run_right', [])
@@ -413,16 +408,15 @@ class Player:
                 elif self.facing == 'down': attack_anim_list = IMAGES.get('attack_2_down', [])
 
             if len(attack_anim_list) > 0:
-                # [속도 조절 동기화] 0.5초로 재생 속도를 맞춥니다
-                progress = 1.0 - (self.attack_timer / 0.5)
+                progress = 1.0 - (self.attack_timer / 0.4)
                 att_frame = int(progress * len(attack_anim_list))
                 if att_frame >= len(attack_anim_list): att_frame = len(attack_anim_list) - 1
                 
                 attack_img = attack_anim_list[att_frame]
                 
-                # [오프셋 동기화] 100, 100으로 설정
-                offset_x = 100  
-                offset_y = 100  
+                # [수정] 220 사이즈에 맞춰 밀착되도록 오프셋 조절
+                offset_x = 55  
+                offset_y = 75  
                 
                 ax, ay = draw_x, draw_y
                 if self.facing == 'right': ax += offset_x
@@ -627,32 +621,13 @@ def main():
                     else:
                         if btn_close_overlay.is_clicked(event, scaled_mouse_pos): 
                             current_overlay = None
-                            continue
-                            
-                        for i in range(3):
-                            slot_key = f"slot_{i+1}"
-                            if saves_data[slot_key] and delete_buttons[i].is_clicked(event, scaled_mouse_pos):
-                                confirm_delete_slot = i + 1; break 
-                            if slot_buttons[i].is_clicked(event, scaled_mouse_pos):
-                                if current_overlay == 'SAVE': confirm_save_slot = i + 1 
-                                elif current_overlay == 'LOAD' and saves_data[slot_key]:
-                                    sd = saves_data[slot_key]
-                                    current_map_idx = sd.get("map_idx", 0)
-                                    cleared_rooms = sd.get("cleared_rooms", [False] * len(MAP_DATA))
-                                    cols, rows = MAP_DATA[current_map_idx]['cols'], MAP_DATA[current_map_idx]['rows']
-                                    room_w, room_h = cols * TILE_SIZE, rows * TILE_SIZE
-                                    
-                                    current_play_time = sd.get("play_time", 0.0)
-                                    player.pos.x, player.pos.y = sd["player_x"], sd["player_y"]
-                                    room_state = sd["room_state"]
-                                    
-                                    enemies.clear()
-                                    for e in sd["enemies"]:
-                                        en = Enemy(e["x"], e["y"], e.get("is_boss", False))
-                                        en.hp = e["hp"]
-                                        enemies.append(en)
-                                        
-                                    bullets.clear(); app_state = APP_PLAYING; current_overlay = None; break
+                        else:
+                            ts = large_font.render("진행상황 저장" if current_overlay == 'SAVE' else "게임 불러오기", True, (255, 255, 255))
+                            display_surface.blit(ts, (center_x - ts.get_width()//2, 170))
+                            for i in range(3): 
+                                slot_buttons[i].draw(display_surface, center_x, scaled_mouse_pos)
+                                if saves_data[f"slot_{i+1}"]: delete_buttons[i].draw(display_surface, center_x, scaled_mouse_pos)
+                            btn_close_overlay.draw(display_surface, center_x, scaled_mouse_pos)
 
             elif app_state == APP_MAIN_MENU:
                 if menu_btn_start.is_clicked(event, scaled_mouse_pos):
@@ -681,9 +656,9 @@ def main():
                         else: player.facing = 'down' if dy > 0 else 'up'
                         
                         if player.trigger_attack():
-                            # [동기화] 시각적 오프셋(100, 100)과 똑같이 타격 판정 중심점도 맞춤!
-                            offset_x = 100
-                            offset_y = 100
+                            # [수정] 220 사이즈에 맞게 히트박스 위치(오프셋)를 당겼습니다!
+                            offset_x = 55
+                            offset_y = 75
                             hx, hy = player.pos.x, player.pos.y
                             
                             if player.facing == 'right': hx += offset_x
@@ -693,8 +668,8 @@ def main():
                             
                             hitbox_pos = pygame.math.Vector2(hx, hy)
                             
-                            # [동기화] 180x180 이미지 크기에 맞춰 판정 반지름을 90으로 설정
-                            hitbox_radius = 90 
+                            # [수정] 220x220 이미지를 완벽하게 덮도록 반지름 110 적용
+                            hitbox_radius = 110 
                             
                             for enemy in enemies[:]:
                                 if hitbox_pos.distance_to(enemy.pos) < hitbox_radius + enemy.radius:
@@ -748,7 +723,8 @@ def main():
                 for bullet in bullets[:]: bullet.update(dt)
                 
                 if room_w//2 - 90 < player.pos.x < room_w//2 + 90:
-                    if player.pos.y < 30 and current_map_idx < len(MAP_DATA) - 1:
+                    # [수정] 플레이어의 몸통(반지름 35)이 닿을 수 있도록 판정선을 30에서 40으로 당겼습니다!
+                    if player.pos.y < 40 and current_map_idx < len(MAP_DATA) - 1:
                         current_map_idx += 1
                         cols, rows = MAP_DATA[current_map_idx]['cols'], MAP_DATA[current_map_idx]['rows']
                         room_w, room_h = cols * TILE_SIZE, rows * TILE_SIZE
@@ -756,7 +732,8 @@ def main():
                         room_state = ROOM_CLEARED if cleared_rooms[current_map_idx] else ROOM_WAITING
                         bullets.clear(); enemies.clear()
                     
-                    elif player.pos.y > room_h - 30 and current_map_idx > 0:
+                    # [수정] 이전 방으로 돌아가는 문 판정도 room_h - 30 에서 room_h - 40 으로 수정!
+                    elif player.pos.y > room_h - 40 and current_map_idx > 0:
                         current_map_idx -= 1
                         cols, rows = MAP_DATA[current_map_idx]['cols'], MAP_DATA[current_map_idx]['rows']
                         room_w, room_h = cols * TILE_SIZE, rows * TILE_SIZE
