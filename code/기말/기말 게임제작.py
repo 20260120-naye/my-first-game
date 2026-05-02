@@ -8,7 +8,7 @@ import math
 # Pygame 초기화
 pygame.init()
 
-# ==================== 한글 폰트 자동 탐색 함수 (로딩 속도 개선 + 예전 폰트 복구!) ====================
+# ==================== 한글 폰트 자동 탐색 함수 ====================
 _cached_fonts = {}
 
 def get_korean_font(size, bold=False):
@@ -122,31 +122,28 @@ def load_images():
     try:
         bg_img = pygame.image.load("./code/기말/assets/naye_home/나예집_배경.png").convert_alpha()
         IMAGES['naye_home_bg'] = pygame.transform.scale(bg_img, (26 * TILE_SIZE, 15 * TILE_SIZE))
-    except Exception as e:
-        pass
+    except: pass
 
     try:
         naye_base = pygame.image.load("./code/기말/assets/image/나예 기본.png").convert_alpha()
         IMAGES['naye_base'] = pygame.transform.scale(naye_base, (1700, 900))
-    except Exception as e:
-        pass
+    except: pass
 
-    # 👇 [핵심 추가] 두 가지 마우스 커서 이미지를 로드합니다!
+    # 👇 마우스 커서 로드 부분 (실패 시 원인을 알려주도록 강화했습니다!)
     try:
         cursor_norm = pygame.image.load("./code/기말/assets/image/마우스_기본.png").convert_alpha()
-        IMAGES['cursor_normal'] = pygame.transform.scale(cursor_norm, (28, 28))
+        IMAGES['cursor_normal'] = pygame.transform.scale(cursor_norm, (32, 32))
         cursor_clk = pygame.image.load("./code/기말/assets/image/마우스_클릭.png").convert_alpha()
-        IMAGES['cursor_click'] = pygame.transform.scale(cursor_clk, (28, 28))
+        IMAGES['cursor_click'] = pygame.transform.scale(cursor_clk, (32, 32))
     except Exception as e:
-        pass
+        print(f"[경고] 커서 이미지를 찾을 수 없습니다. 경로를 확인해주세요! ({e})")
 
     try:
         idle_1 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/대기 모션_1.png").convert_alpha(), (65, 65))
         idle_2 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/대기 모션_2.png").convert_alpha(), (65, 65))
         idle_3 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/대기 모션_3.png").convert_alpha(), (65, 65))
         IMAGES['player_idle'] = [idle_1, idle_2, idle_2, idle_3, idle_3, idle_2, idle_2, idle_1]
-    except Exception as e:
-        pass
+    except: pass
 
     try:
         run_1 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/걷기 모션_1.png").convert_alpha(), (60, 60))
@@ -157,21 +154,15 @@ def load_images():
         run_6 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/걷기 모션_6.png").convert_alpha(), (60, 60))
 
         IMAGES['player_run_right'] = [run_1, run_2, run_2, run_1, run_1, run_3, run_3, run_1, run_1, run_4, run_4, run_1, run_1, run_5, run_5, run_1, run_1, run_6, run_6, run_1]
-        
-        IMAGES['player_run_left'] = []
-        for img in IMAGES['player_run_right']:
-            flipped_img = pygame.transform.flip(img, True, False) 
-            IMAGES['player_run_left'].append(flipped_img)
-    except Exception as e:
-        pass
+        IMAGES['player_run_left'] = [pygame.transform.flip(img, True, False) for img in IMAGES['player_run_right']]
+    except: pass
 
     try:
         up_1 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/뒷면 걷기_1.png").convert_alpha(), (60, 60))
         up_2 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/뒷면 걷기_2.png").convert_alpha(), (60, 60))
         up_3 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/뒷면 걷기_3.png").convert_alpha(), (60, 60))
         IMAGES['player_run_up'] = [up_1, up_2, up_2, up_3, up_3, up_2, up_2, up_1] 
-    except Exception as e:
-        pass
+    except: pass
 
     try:
         down_1 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/정면 걷기_1.png").convert_alpha(), (60, 60))
@@ -180,17 +171,14 @@ def load_images():
         down_4 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/정면 걷기_4.png").convert_alpha(), (55, 55))
         down_5 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/정면 걷기_5.png").convert_alpha(), (55, 55))
         IMAGES['player_run_down'] = [down_1, down_2, down_2, down_3, down_3, down_4, down_4, down_5, down_5, down_1] 
-    except Exception as e:
-        pass
+    except: pass
 
     try:
         att1_1 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 오_왼_1.png").convert_alpha(), (180, 180))
         att1_2 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 오_왼_2.png").convert_alpha(), (180, 180))
         att1_3 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 오_왼_3.png").convert_alpha(), (180, 180))
         att1_4 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 오_왼_4.png").convert_alpha(), (180, 180))
-        
         IMAGES['attack_1_right'] = [att1_1, att1_2, att1_3, att1_4]
-        
         IMAGES['attack_1_left'] = [pygame.transform.flip(img, True, False) for img in IMAGES['attack_1_right']]
         IMAGES['attack_1_up'] = [pygame.transform.rotate(img, 90) for img in IMAGES['attack_1_right']]
         IMAGES['attack_1_down'] = [pygame.transform.rotate(img, -90) for img in IMAGES['attack_1_right']]
@@ -199,15 +187,11 @@ def load_images():
         att2_2 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 왼_오_2.png").convert_alpha(), (180, 180))
         att2_3 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 왼_오_3.png").convert_alpha(), (180, 180))
         att2_4 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 왼_오_4.png").convert_alpha(), (180, 180))
-        
         IMAGES['attack_2_right'] = [att2_1, att2_2, att2_3, att2_4]
-        
         IMAGES['attack_2_left'] = [pygame.transform.flip(img, True, False) for img in IMAGES['attack_2_right']]
         IMAGES['attack_2_up'] = [pygame.transform.rotate(img, 90) for img in IMAGES['attack_2_right']]
         IMAGES['attack_2_down'] = [pygame.transform.rotate(img, -90) for img in IMAGES['attack_2_right']]
-        
-    except Exception as e:
-        pass
+    except: pass
 
 # ==================== 설정(Config) 및 세이브 ====================
 CONFIG_FILE = "settings.json"
@@ -590,7 +574,6 @@ def main():
     saves_data = get_save_data(); current_play_time = 0.0
     camera_x, camera_y = 0, 0
     
-    # 👇 [핵심 추가] 마우스 클릭 상태를 추적할 변수를 만들었습니다.
     is_mouse_down = False
     
     popup_msg = ""
@@ -601,6 +584,14 @@ def main():
     large_font = get_korean_font(40)
     small_font = get_korean_font(20)
     mini_font = get_korean_font(16)
+    
+    # 미니맵 좌표 (소용돌이 형태)
+    minimap_positions = [
+        (0, 0), (1, 0), (2, 0), 
+        (2, 1), (2, 2), 
+        (1, 2), (0, 2), 
+        (0, 1)
+    ]
 
     current_overlay = None; current_tab = "VIDEO"; waiting_for_key = None
     confirm_delete_slot = None; confirm_save_slot = None
@@ -664,7 +655,6 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT: running = False
             
-            # 👇 [핵심 추가] 마우스를 누르고 떼는 이벤트를 감지합니다.
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 is_mouse_down = True
             if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
@@ -872,18 +862,46 @@ def main():
             if room_h >= VIEW_H: camera_y = max(0, min(player.pos.y - VIEW_H / 2, room_h - VIEW_H))
             else: camera_y = -(VIEW_H - room_h) // 2
 
+            # 👇 [핵심 추가] 몬스터가 다음 맵으로 넘어가는 문 바로 앞에서 스폰되도록 수정했습니다!
             if room_state == ROOM_WAITING:
                 if current_map_idx == -1:
                     room_state = ROOM_CLEARED
                 elif not cleared_rooms[current_map_idx]: 
                     room_state = ROOM_COMBAT
                     if current_map_idx == len(MAP_DATA) - 1:
+                        # 보스방은 예외로 정중앙 스폰
                         enemies.append(Enemy(room_w // 2, room_h // 2, is_boss=True))
                     else:
-                        spawn_margin_x, spawn_margin_y = min(225, room_w // 4), min(225, room_h // 4)
-                        enemies.append(Enemy(spawn_margin_x, spawn_margin_y))
-                        enemies.append(Enemy(room_w - spawn_margin_x, spawn_margin_y))
-                        enemies.append(Enemy(room_w // 2, spawn_margin_y + 150))
+                        pos_curr = minimap_positions[current_map_idx]
+                        pos_next = minimap_positions[current_map_idx + 1]
+                        dx = pos_next[0] - pos_curr[0]
+                        dy = pos_next[1] - pos_curr[1]
+                        
+                        door_x, door_y = room_w // 2, room_h // 2
+                        off_x, off_y = 0, 0
+                        
+                        # 나선형 맵 구조에 따라 다음 문의 위치를 계산합니다.
+                        if dy == -1: # 다음 문이 위에 있을 때
+                            door_x, door_y = room_w // 2, 80
+                            off_x, off_y = 0, 120 # 문 살짝 아래에 스폰
+                        elif dy == 1: # 다음 문이 아래에 있을 때
+                            door_x, door_y = room_w // 2, room_h - 80
+                            off_x, off_y = 0, -120 # 문 살짝 위에 스폰
+                        elif dx == -1: # 다음 문이 왼쪽에 있을 때
+                            door_x, door_y = 80, room_h // 2
+                            off_x, off_y = 120, 0 # 문 살짝 오른쪽에 스폰
+                        elif dx == 1: # 다음 문이 오른쪽에 있을 때
+                            door_x, door_y = room_w - 80, room_h // 2
+                            off_x, off_y = -120, 0 # 문 살짝 왼쪽에 스폰
+                            
+                        # 계산된 문 앞 위치에 3마리가 살짝 퍼져서 스폰됩니다.
+                        enemies.append(Enemy(door_x + off_x, door_y + off_y))
+                        if off_x == 0:
+                            enemies.append(Enemy(door_x - 80, door_y + off_y + (40 if off_y > 0 else -40)))
+                            enemies.append(Enemy(door_x + 80, door_y + off_y + (40 if off_y > 0 else -40)))
+                        else:
+                            enemies.append(Enemy(door_x + off_x + (40 if off_x > 0 else -40), door_y - 80))
+                            enemies.append(Enemy(door_x + off_x + (40 if off_x > 0 else -40), door_y + 80))
                         
             elif room_state == ROOM_COMBAT:
                 for enemy in enemies: enemy.update(dt, player.pos)
@@ -905,32 +923,70 @@ def main():
             elif room_state in [ROOM_WAITING, ROOM_CLEARED]:
                 for bullet in bullets[:]: bullet.update(dt)
                 
-                if room_w//2 - TILE_SIZE < player.pos.x < room_w//2 + TILE_SIZE:
-                    
-                    if player.pos.y < 40 and current_map_idx >= 0 and current_map_idx < len(MAP_DATA) - 1:
-                        current_map_idx += 1
-                        cols, rows = MAP_DATA[current_map_idx]['cols'], MAP_DATA[current_map_idx]['rows']
+                transitioned = False
+                
+                # 👇 [핵심 복구] 나예 집(-1) ➡️ 교실(0) 이동 로직 완벽 복구
+                if current_map_idx == -1:
+                    # 현관문(아래쪽)으로 넓게 비비면 교실로 이동합니다!
+                    if (room_w//2 - 100 < player.pos.x < room_w//2 + 100) and player.pos.y > room_h - 45:
+                        current_map_idx = 0
+                        cols, rows = MAP_DATA[0]['cols'], MAP_DATA[0]['rows']
                         room_w, room_h = cols * TILE_SIZE, rows * TILE_SIZE
-                        player.pos.x, player.pos.y = room_w // 2, room_h - 90
-                        room_state = ROOM_CLEARED if cleared_rooms[current_map_idx] else ROOM_WAITING
-                        bullets.clear(); enemies.clear()
+                        
+                        # 교실 진입 시 왼쪽 문에서 시작합니다.
+                        player.pos.x, player.pos.y = 90, room_h // 2
+                        transitioned = True
+
+                # 학교 내부 나선형 맵 이동 로직 (교실 0 ~ 교장실 7)
+                if not transitioned and current_map_idx >= 0:
+                    pos_curr = minimap_positions[current_map_idx]
+                    doors = []
                     
-                    elif player.pos.y > room_h - 40:
-                        if current_map_idx == -1: 
-                            current_map_idx = 0
-                            cols, rows = MAP_DATA[0]['cols'], MAP_DATA[0]['rows']
-                            room_w, room_h = cols * TILE_SIZE, rows * TILE_SIZE
-                            player.pos.x, player.pos.y = room_w // 2, room_h - 90 
-                            room_state = ROOM_CLEARED if cleared_rooms[0] else ROOM_WAITING
-                            bullets.clear(); enemies.clear()
+                    if current_map_idx < len(MAP_DATA) - 1:
+                        pos_next = minimap_positions[current_map_idx + 1]
+                        dx, dy = pos_next[0] - pos_curr[0], pos_next[1] - pos_curr[1]
+                        if dx == 1: doors.append({'dir': 'RIGHT', 'target': current_map_idx + 1})
+                        elif dx == -1: doors.append({'dir': 'LEFT', 'target': current_map_idx + 1})
+                        elif dy == 1: doors.append({'dir': 'BOTTOM', 'target': current_map_idx + 1})
+                        elif dy == -1: doors.append({'dir': 'TOP', 'target': current_map_idx + 1})
+                        
+                    for door in doors:
+                        d_dir = door['dir']
+                        tgt = door['target']
+                        trig = False
+                        sp_dir = ''
+                        
+                        # 각 벽면에 부딪히면 다음 방으로 넘어갑니다. (히트박스를 넓혀 문 통과를 매우 쉽게 만듦!)
+                        if d_dir == 'TOP' and player.pos.y < 45 and (room_w//2 - 100 < player.pos.x < room_w//2 + 100):
+                            trig, sp_dir = True, 'BOTTOM'
+                        elif d_dir == 'BOTTOM' and player.pos.y > room_h - 45 and (room_w//2 - 100 < player.pos.x < room_w//2 + 100):
+                            trig, sp_dir = True, 'TOP'
+                        elif d_dir == 'LEFT' and player.pos.x < 45 and (room_h//2 - 100 < player.pos.y < room_h//2 + 100):
+                            trig, sp_dir = True, 'RIGHT'
+                        elif d_dir == 'RIGHT' and player.pos.x > room_w - 45 and (room_h//2 - 100 < player.pos.y < room_h//2 + 100):
+                            trig, sp_dir = True, 'LEFT'
                             
-                        elif current_map_idx > 0:
-                            current_map_idx -= 1
+                        if trig:
+                            current_map_idx = tgt
                             cols, rows = MAP_DATA[current_map_idx]['cols'], MAP_DATA[current_map_idx]['rows']
                             room_w, room_h = cols * TILE_SIZE, rows * TILE_SIZE
-                            player.pos.x, player.pos.y = room_w // 2, 90
-                            room_state = ROOM_CLEARED if cleared_rooms[current_map_idx] else ROOM_WAITING
-                            bullets.clear(); enemies.clear()
+                            
+                            if sp_dir == 'BOTTOM': player.pos.x, player.pos.y = room_w // 2, room_h - 90
+                            elif sp_dir == 'TOP': player.pos.x, player.pos.y = room_w // 2, 90
+                            elif sp_dir == 'RIGHT': player.pos.x, player.pos.y = room_w - 90, room_h // 2
+                            elif sp_dir == 'LEFT': player.pos.x, player.pos.y = 90, room_h // 2
+                            
+                            transitioned = True
+                            break
+                            
+                # 공통 화면 상태 업데이트
+                if transitioned:
+                    if current_map_idx == -1:
+                        room_state = ROOM_CLEARED
+                    else:
+                        room_state = ROOM_CLEARED if cleared_rooms[current_map_idx] else ROOM_WAITING
+                    bullets.clear()
+                    enemies.clear()
 
         # ==================== 렌더링 (그리기) ====================
         display_surface.fill((0, 0, 0)) 
@@ -959,10 +1015,26 @@ def main():
                 door_w = TILE_SIZE * 2
                 door_half_w = door_w // 2
                 
+                # 교실에서는 더 이상 나예 집으로 돌아가는 왼쪽 문을 그리지 않습니다! (일방통행)
+                doors_to_draw = []
+                pos_curr = minimap_positions[current_map_idx]
                 if current_map_idx < len(MAP_DATA) - 1:
-                    pygame.draw.rect(view_surface, door_color, (room_w//2 - door_half_w - camera_x, -camera_y, door_w, 30))
-                if current_map_idx > 0:
-                    pygame.draw.rect(view_surface, door_color, (room_w//2 - door_half_w - camera_x, room_h - 30 - camera_y, door_w, 30))
+                    pos_next = minimap_positions[current_map_idx + 1]
+                    dx, dy = pos_next[0] - pos_curr[0], pos_next[1] - pos_curr[1]
+                    if dx == 1: doors_to_draw.append('RIGHT')
+                    elif dx == -1: doors_to_draw.append('LEFT')
+                    elif dy == 1: doors_to_draw.append('BOTTOM')
+                    elif dy == -1: doors_to_draw.append('TOP')
+                    
+                for d in doors_to_draw:
+                    if d == 'TOP':
+                        pygame.draw.rect(view_surface, door_color, (room_w//2 - door_half_w - camera_x, -camera_y, door_w, 30))
+                    elif d == 'BOTTOM':
+                        pygame.draw.rect(view_surface, door_color, (room_w//2 - door_half_w - camera_x, room_h - 30 - camera_y, door_w, 30))
+                    elif d == 'LEFT':
+                        pygame.draw.rect(view_surface, door_color, (-camera_x, room_h//2 - door_half_w - camera_y, 30, door_w))
+                    elif d == 'RIGHT':
+                        pygame.draw.rect(view_surface, door_color, (room_w - 30 - camera_x, room_h//2 - door_half_w - camera_y, 30, door_w))
                     
             else:
                 if 'naye_home_bg' in IMAGES:
@@ -1032,7 +1104,7 @@ def main():
                 popup_timer -= dt
                 popup_surf = mini_font.render(popup_msg, True, (150, 255, 150))
                 draw_px = int(player.pos.x - camera_x) + VIEW_MARGIN_X
-                draw_py = int(player.pos.y - camera_y) + VIEW_MARGIN_Y - 70 
+                draw_py = int(player.pos.y - camera_y) + VIEW_MARGIN_Y - 105 
                 
                 bg_rect = popup_surf.get_rect(center=(draw_px, draw_py))
                 bg_rect.inflate_ip(12, 8)
@@ -1089,27 +1161,36 @@ def main():
 
             if current_map_idx >= 0:
                 minimap_room_size = 24  
-                minimap_margin = 8      
-                minimap_start_x = LOGICAL_WIDTH - 80 
-                minimap_start_y = 90    
+                minimap_margin = 16      
+                
+                minimap_start_x = 1710 
+                minimap_start_y = 140  
+                
+                for i in range(len(MAP_DATA) - 1):
+                    curr_idx = i
+                    next_idx = i + 1
+                    
+                    curr_vis = cleared_rooms[curr_idx] or (curr_idx == current_map_idx) or (abs(curr_idx - current_map_idx) == 1)
+                    next_vis = cleared_rooms[next_idx] or (next_idx == current_map_idx) or (abs(next_idx - current_map_idx) == 1)
+                    
+                    if curr_vis and next_vis:
+                        x1 = minimap_start_x + minimap_positions[curr_idx][0] * (minimap_room_size + minimap_margin) + minimap_room_size // 2
+                        y1 = minimap_start_y + minimap_positions[curr_idx][1] * (minimap_room_size + minimap_margin) + minimap_room_size // 2
+                        x2 = minimap_start_x + minimap_positions[next_idx][0] * (minimap_room_size + minimap_margin) + minimap_room_size // 2
+                        y2 = minimap_start_y + minimap_positions[next_idx][1] * (minimap_room_size + minimap_margin) + minimap_room_size // 2
+                        
+                        pygame.draw.line(display_surface, (100, 100, 110), (x1, y1), (x2, y2), 4)
 
                 for i in range(len(MAP_DATA)):
-                    draw_idx = (len(MAP_DATA) - 1) - i
-                    rect_x = minimap_start_x
-                    rect_y = minimap_start_y + i * (minimap_room_size + minimap_margin)
-
+                    draw_idx = i
                     is_cleared = cleared_rooms[draw_idx]
                     is_current = (draw_idx == current_map_idx)
                     is_adjacent = abs(draw_idx - current_map_idx) == 1 
                     
                     if not (is_cleared or is_current or is_adjacent): continue
 
-                    if i < len(MAP_DATA) - 1:
-                        next_draw_idx = draw_idx - 1
-                        next_is_visible = cleared_rooms[next_draw_idx] or (next_draw_idx == current_map_idx) or (abs(next_draw_idx - current_map_idx) == 1)
-                        if next_is_visible:
-                            pygame.draw.rect(display_surface, (100, 100, 100), 
-                                             (rect_x + minimap_room_size//2 - 2, rect_y + minimap_room_size, 4, minimap_margin))
+                    rect_x = minimap_start_x + minimap_positions[draw_idx][0] * (minimap_room_size + minimap_margin)
+                    rect_y = minimap_start_y + minimap_positions[draw_idx][1] * (minimap_room_size + minimap_margin)
 
                     if is_current:
                         bg_color = (200, 200, 200)
@@ -1121,11 +1202,11 @@ def main():
                         bg_color = (30, 30, 30)
                         border_color = (80, 80, 80)
 
-                    pygame.draw.rect(display_surface, bg_color, (rect_x, rect_y, minimap_room_size, minimap_room_size), border_radius=3)
-                    pygame.draw.rect(display_surface, border_color, (rect_x, rect_y, minimap_room_size, minimap_room_size), 2, border_radius=3)
+                    pygame.draw.rect(display_surface, bg_color, (rect_x, rect_y, minimap_room_size, minimap_room_size), border_radius=4)
+                    pygame.draw.rect(display_surface, border_color, (rect_x, rect_y, minimap_room_size, minimap_room_size), 2, border_radius=4)
 
                     if is_current:
-                        pygame.draw.circle(display_surface, PLAYER_COLOR, (rect_x + minimap_room_size//2, rect_y + minimap_room_size//2), 5)
+                        pygame.draw.circle(display_surface, PLAYER_COLOR, (rect_x + minimap_room_size//2, rect_y + minimap_room_size//2), 6)
 
         if current_overlay:
             overlay_bg = pygame.Surface((LOGICAL_WIDTH, LOGICAL_HEIGHT), pygame.SRCALPHA)
@@ -1196,19 +1277,13 @@ def main():
                             if saves_data[f"slot_{i+1}"]: delete_buttons[i].draw(display_surface, center_x, scaled_mouse_pos)
                         btn_close_overlay.draw(display_surface, center_x, scaled_mouse_pos)
 
-        # 👇 [핵심 추가] 게임 화면을 모두 그린 후, 가장 마지막에 커스텀 마우스 커서를 그려줍니다!
+        # 👇 [핵심 점검] 준비하신 커서 이미지가 성공적으로 불러와지면 화면 맨 마지막에 무조건 그립니다!
         if 'cursor_normal' in IMAGES and 'cursor_click' in IMAGES:
-            # 윈도우 기본 마우스를 항상 숨김 처리합니다.
             pygame.mouse.set_visible(False)
-            
-            # 마우스가 눌려있는지 여부에 따라 커서 모양을 결정합니다.
             current_cursor = IMAGES['cursor_click'] if is_mouse_down else IMAGES['cursor_normal']
-            
-            # 마우스 현재 좌표(스케일 적용된 값)에 커서 이미지를 출력합니다.
             cx, cy = scaled_mouse_pos
             display_surface.blit(current_cursor, (cx, cy))
         else:
-            # 커서 이미지가 없으면 오류가 나지 않도록 다시 기본 윈도우 마우스를 보여줍니다.
             pygame.mouse.set_visible(True)
 
         screen.blit(pygame.transform.scale(display_surface, (current_width, current_height)), (0, 0))
