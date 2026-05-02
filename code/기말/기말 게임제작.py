@@ -58,7 +58,7 @@ TILE_SIZE = 32
 
 MAP_DATA = [
     {"name": "교실", "cols": 40, "rows": 30},
-    {"name": "화장실", "cols": 26, "rows": 15}, # 👈 25에서 26으로 짝수화!
+    {"name": "화장실", "cols": 26, "rows": 15}, 
     {"name": "보건실", "cols": 20, "rows": 30},
     {"name": "체육관", "cols": 60, "rows": 60},
     {"name": "급식실", "cols": 50, "rows": 60},
@@ -67,43 +67,63 @@ MAP_DATA = [
     {"name": "교장실", "cols": 80, "rows": 60} 
 ]
 
-# ==================== Tiled 맵 불러오기 함수 ====================
-# 👇 기본 맵 크기도 짝수인 26x15로 맞춤
-def load_tiled_map(filepath, default_cols=26, default_rows=15):
-    map_data = []
-    if os.path.exists(filepath):
-        try:
-            with open(filepath, 'r', encoding='utf-8-sig') as f:
-                reader = csv.reader(f)
-                for row in reader:
-                    map_data.append([int(val) for val in row if val.strip() != ''])
-            return map_data
-        except Exception as e:
-            print(f"맵 로딩 오류: {e}")
-            
-    print("맵 파일이 없습니다. 임시 26x15 맵을 생성합니다.")
-    map_data = [[0 for _ in range(default_cols)] for _ in range(default_rows)]
-    for i in range(default_cols):
-        map_data[0][i] = 1 # 윗벽
-        map_data[default_rows-1][i] = 1 # 아랫벽
-    for i in range(default_rows):
-        map_data[i][0] = 1 # 왼쪽 벽
-        map_data[i][default_cols-1] = 1 # 오른쪽 벽
-        
-    # 👇 [수정] 아랫쪽 정중앙에 딱 2칸만 문(0: 통과) 뚫기
-    mid = default_cols // 2
-    map_data[default_rows-1][mid-1] = 0
-    map_data[default_rows-1][mid] = 0
-        
-    return map_data
+# ==================== Tiled 충돌 맵 불러오기 함수 ====================
+def load_tiled_map(filepaths, default_cols=26, default_rows=15):
+    combined_map = [[0 for _ in range(default_cols)] for _ in range(default_rows)]
+    loaded_any = False
 
-# Tiled 맵 불러오기 (26x15 크기로 로드)
-NAYE_HOME_MAP = load_tiled_map("./code/기말/assets/map/naye_home.csv", 26, 15)
+    for filepath in filepaths:
+        if os.path.exists(filepath):
+            loaded_any = True
+            try:
+                with open(filepath, 'r', encoding='utf-8-sig') as f:
+                    reader = csv.reader(f)
+                    for row_idx, row in enumerate(reader):
+                        clean_row = [val for val in row if val.strip() != '']
+                        if not clean_row: continue
+                        
+                        for col_idx, val_str in enumerate(clean_row):
+                            if row_idx >= default_rows or col_idx >= default_cols:
+                                continue
+                            
+                            raw_val = int(val_str)
+                            real_val = raw_val & 0x0FFFFFFF
+                            
+                            # 빈 공간(-1, 0)이 아니면 무조건 벽(1)으로 통일!
+                            if real_val != -1 and real_val != 0: 
+                                combined_map[row_idx][col_idx] = 1
+            except Exception as e:
+                print(f"맵 로딩 오류 ({filepath}): {e}")
+
+    # 파일이 하나도 없을 경우 기본 테두리 방을 만들어 줍니다.
+    if not loaded_any:
+        print("맵 파일이 없습니다. 임시 26x15 맵을 생성합니다.")
+        combined_map = [[0 for _ in range(default_cols)] for _ in range(default_rows)]
+        for i in range(default_cols): combined_map[0][i] = 1; combined_map[default_rows-1][i] = 1
+        for i in range(default_rows): combined_map[i][0] = 1; combined_map[i][default_cols-1] = 1
+        mid = default_cols // 2
+        combined_map[default_rows-1][mid-1] = 0; combined_map[default_rows-1][mid] = 0
+
+    return combined_map
+
+# 벽 역할을 할 충돌 CSV 파일 불러오기
+layer_files = [
+    "./code/기말/assets/naye_home/나예집_충돌.csv"
+]
+
+NAYE_HOME_MAP = load_tiled_map(layer_files, 26, 15)
 
 # ==================== 이미지 자원 관리 ====================
 IMAGES = {}
 
 def load_images():
+    # 배경 이미지 불러오기
+    try:
+        bg_img = pygame.image.load("./code/기말/assets/naye_home/나예집_배경.png").convert_alpha()
+        IMAGES['naye_home_bg'] = pygame.transform.scale(bg_img, (26 * TILE_SIZE, 15 * TILE_SIZE))
+    except Exception as e:
+        print("배경 이미지 로드 실패 (파일 이름을 확인하세요):", e)
+
     try:
         naye_base = pygame.image.load("./code/기말/assets/image/나예 기본.png").convert_alpha()
         IMAGES['naye_base'] = pygame.transform.scale(naye_base, (1700, 900))
@@ -153,7 +173,6 @@ def load_images():
     except Exception as e:
         pass
 
-    # ==================== 3. 공격 모션 이미지 ====================
     try:
         att1_1 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 오_왼_1.png").convert_alpha(), (220, 220))
         att1_2 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 오_왼_2.png").convert_alpha(), (220, 220))
@@ -357,7 +376,6 @@ class Player:
             move_x = direction.x * self.speed * dt
             move_y = direction.y * self.speed * dt
 
-        # [타일맵 충돌 검사]
         can_move_x, can_move_y = True, True
         if current_map_idx == -1 and tile_map:
             passable_tiles = [0] 
@@ -721,7 +739,8 @@ def main():
                     player = Player(room_w, room_h)
                     
                     player.pos.x = room_w // 2
-                    player.pos.y = 90
+                    # 👇 [수정] 캐릭터 시작 위치를 중앙 근처(250)로 시원하게 내렸습니다!
+                    player.pos.y = 250
                     
                     bullets.clear(); enemies.clear()
                     room_state = ROOM_CLEARED
@@ -811,7 +830,6 @@ def main():
             elif room_state in [ROOM_WAITING, ROOM_CLEARED]:
                 for bullet in bullets[:]: bullet.update(dt)
                 
-                # 👇 [수정] 방 이동 판정 범위: 정중앙 타일 2개(64px)에 맞춰서 설정
                 if room_w//2 - TILE_SIZE < player.pos.x < room_w//2 + TILE_SIZE:
                     
                     if player.pos.y < 40 and current_map_idx >= 0 and current_map_idx < len(MAP_DATA) - 1:
@@ -863,8 +881,6 @@ def main():
                     pygame.draw.line(view_surface, GRID_COLOR, (-camera_x, y_pos), (room_w - camera_x, y_pos), 1)
 
                 door_color = DOOR_OPEN_COLOR if room_state in [ROOM_WAITING, ROOM_CLEARED] else DOOR_LOCKED_COLOR
-                
-                # 👇 [수정] 눈에 보이는 문의 넓이도 정중앙 2칸(64px)에 완벽하게 일치시킴
                 door_w = TILE_SIZE * 2
                 door_half_w = door_w // 2
                 
@@ -874,19 +890,10 @@ def main():
                     pygame.draw.rect(view_surface, door_color, (room_w//2 - door_half_w - camera_x, room_h - 30 - camera_y, door_w, 30))
                     
             else:
-                start_col = max(0, int(camera_x // TILE_SIZE))
-                end_col = min(len(NAYE_HOME_MAP[0]), int((camera_x + VIEW_W) // TILE_SIZE) + 1)
-                start_row = max(0, int(camera_y // TILE_SIZE))
-                end_row = min(len(NAYE_HOME_MAP), int((camera_y + VIEW_H) // TILE_SIZE) + 1)
+                if 'naye_home_bg' in IMAGES:
+                    view_surface.blit(IMAGES['naye_home_bg'], (-camera_x, -camera_y))
                 
-                for row_idx in range(start_row, end_row):
-                    for col_idx in range(start_col, end_col):
-                        tile_val = NAYE_HOME_MAP[row_idx][col_idx]
-                        x = col_idx * TILE_SIZE - camera_x
-                        y = row_idx * TILE_SIZE - camera_y
-                        
-                        if tile_val == 1: 
-                            pygame.draw.rect(view_surface, (80, 80, 90), (x, y, TILE_SIZE, TILE_SIZE))
+                # 👇 [삭제] 빨간색 테스트 네모 그리는 코드(for문)를 통째로 날렸습니다!
 
             if room_state == ROOM_COMBAT:
                 for enemy in enemies: enemy.draw(view_surface, camera_x, camera_y)
