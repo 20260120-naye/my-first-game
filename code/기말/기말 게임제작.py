@@ -132,9 +132,9 @@ def load_images():
     # 👇 마우스 커서 로드 부분 (실패 시 원인을 알려주도록 강화했습니다!)
     try:
         cursor_norm = pygame.image.load("./code/기말/assets/image/마우스_기본.png").convert_alpha()
-        IMAGES['cursor_normal'] = pygame.transform.scale(cursor_norm, (32, 32))
+        IMAGES['cursor_normal'] = pygame.transform.scale(cursor_norm, (28, 28))
         cursor_clk = pygame.image.load("./code/기말/assets/image/마우스_클릭.png").convert_alpha()
-        IMAGES['cursor_click'] = pygame.transform.scale(cursor_clk, (32, 32))
+        IMAGES['cursor_click'] = pygame.transform.scale(cursor_clk, (28, 28))
     except Exception as e:
         print(f"[경고] 커서 이미지를 찾을 수 없습니다. 경로를 확인해주세요! ({e})")
 
