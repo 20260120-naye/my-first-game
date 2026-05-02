@@ -108,7 +108,7 @@ def load_images():
         att1_3 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 오_왼_3.png").convert_alpha(), (220, 220))
         att1_4 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 오_왼_4.png").convert_alpha(), (220, 220))
         
-        IMAGES['attack_1_right'] = [att1_1, att1_1, att1_2,  att1_3, att1_4, att1_4]
+        IMAGES['attack_1_right'] = [att1_1, att1_2, att1_3, att1_4]
         
         IMAGES['attack_1_left'] = [pygame.transform.flip(img, True, False) for img in IMAGES['attack_1_right']]
         IMAGES['attack_1_up'] = [pygame.transform.rotate(img, 90) for img in IMAGES['attack_1_right']]
@@ -119,7 +119,7 @@ def load_images():
         att2_3 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 왼_오_3.png").convert_alpha(), (220, 220))
         att2_4 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 왼_오_4.png").convert_alpha(), (220, 220))
         
-        IMAGES['attack_2_right'] = [att2_1, att2_1, att2_2, att2_3, att2_4, att2_4]
+        IMAGES['attack_2_right'] = [att2_1, att2_2, att2_3, att2_4]
         
         IMAGES['attack_2_left'] = [pygame.transform.flip(img, True, False) for img in IMAGES['attack_2_right']]
         IMAGES['attack_2_up'] = [pygame.transform.rotate(img, 90) for img in IMAGES['attack_2_right']]
@@ -214,11 +214,6 @@ class Button:
 # ==================== 게임 객체 ====================
 class Player:
     def __init__(self, room_w, room_h):
-
-        self.move_lock_timer = 0.0 
-        self.attack_cooldown_timer = 0.0 
-        self.pose_hold_timer = 0.0   # 👈 [추가] 공격 후 자세 유지 1초 타이머
-        
         self.pos = pygame.math.Vector2(room_w // 2, room_h - 90)
         self.normal_speed = 600
         self.speed = self.normal_speed
@@ -239,6 +234,7 @@ class Player:
         
         self.move_lock_timer = 0.0 
         self.attack_cooldown_timer = 0.0 
+        self.pose_hold_timer = 0.0 
         
         self.frame_index = 0.0          
         self.animation_speed = 6.0      
@@ -251,17 +247,17 @@ class Player:
         if not self.is_attacking and self.combo_window <= 0:
             self.is_attacking = True
             self.attack_step = 1
-            self.attack_timer = 0.3   # [속도 조절] 0.4초
+            self.attack_timer = 0.3  
             self.combo_window = 0.8   
             self.frame_index = 0.0
             self.move_lock_timer = 0.15 
             return True
             
         elif self.combo_window > 0 and self.attack_step == 1:
-            if self.attack_timer < 0.25: 
+            if self.attack_timer < 0.3: 
                 self.is_attacking = True
                 self.attack_step = 2
-                self.attack_timer = 0.3   # [속도 조절] 0.8초
+                self.attack_timer = 0.3   
                 self.combo_window = 0.0  
                 self.frame_index = 0.0
                 self.move_lock_timer = 0.15 
@@ -271,11 +267,10 @@ class Player:
         return False
 
     def move(self, dt, room_w, room_h, target_x, target_y):
-        # 타이머 업데이트
         if self.dash_cooldown_left > 0: self.dash_cooldown_left -= dt
         if self.move_lock_timer > 0: self.move_lock_timer -= dt
         if self.attack_cooldown_timer > 0: self.attack_cooldown_timer -= dt
-        if self.pose_hold_timer > 0: self.pose_hold_timer -= dt  # 👈 [추가]
+        if self.pose_hold_timer > 0: self.pose_hold_timer -= dt
             
         for ghost in self.afterimages: ghost['timer'] -= dt
         self.afterimages = [g for g in self.afterimages if g['timer'] > 0]
@@ -284,12 +279,11 @@ class Player:
             self.attack_timer -= dt
             if self.attack_timer <= 0:
                 self.is_attacking = False
-                self.pose_hold_timer = 0.5  # 👈 [추가] 공격 종료 시 0.5초 동안 자세 유지 세팅
+                self.pose_hold_timer = 0.5 
                 
         if self.combo_window > 0:
             self.combo_window -= dt
 
-        # 👇 [핵심 수정] 공격 중이거나 0.5초 자세 유지 중일 때는 마우스 쪽으로 시선을 안 돌림!
         if not self.is_attacking and self.pose_hold_timer <= 0:
             dx = target_x - self.pos.x
             dy = target_y - self.pos.y
@@ -298,7 +292,16 @@ class Player:
             else:
                 self.facing = 'down' if dy > 0 else 'up'
 
-        # ... (대쉬 처리 부분 그대로 유지) ...
+        if self.is_dashing:
+            self.dash_time_left -= dt
+            if self.dash_time_left <= 0:
+                self.is_dashing = False
+                self.speed = self.normal_speed
+            else:
+                self.pos += self.dash_direction * self.speed * dt
+                self.pos.x = max(self.radius, min(room_w - self.radius, self.pos.x))
+                self.pos.y = max(self.radius, min(room_h - self.radius, self.pos.y))
+                return 
 
         keys = pygame.key.get_pressed()
         direction = pygame.math.Vector2(0, 0)
@@ -311,9 +314,7 @@ class Player:
 
         if direction.length() > 0: 
             direction = direction.normalize()
-            self.pose_hold_timer = 0.0  # 👈 [추가] 이동 키를 누르면 1초 유지가 즉시 풀리고 걷기 시작
-
-        # ... (나머지 이동 로직 그대로 유지) ...
+            self.pose_hold_timer = 0.0
 
         if keys[pygame.K_SPACE] and self.dash_cooldown_left <= 0 and direction.length() > 0 and self.move_lock_timer <= 0:
             self.is_dashing = True
@@ -351,7 +352,6 @@ class Player:
             elif self.facing == 'up': base_anim_list = IMAGES.get('player_run_up', [])
             elif self.facing == 'down': base_anim_list = IMAGES.get('player_run_down', [])
         
-        # 👇 [수정] 맨 끝에 `or self.pose_hold_timer > 0` 조건을 추가해 줍니다.
         elif self.is_attacking or self.move_lock_timer > 0 or self.attack_cooldown_timer > 0 or self.pose_hold_timer > 0:
             run_anim = []
             if self.facing == 'right': run_anim = IMAGES.get('player_run_right', [])
@@ -419,7 +419,6 @@ class Player:
                 
                 attack_img = attack_anim_list[att_frame]
                 
-                # [수정] 220 사이즈에 맞춰 밀착되도록 오프셋 조절
                 offset_x = 55  
                 offset_y = 75  
                 
@@ -495,9 +494,9 @@ def main():
     load_images()
     
     app_state = APP_MAIN_MENU 
-    current_map_idx = 0
+    current_map_idx = -1 
     cleared_rooms = [False] * len(MAP_DATA)
-    cols, rows = MAP_DATA[0]['cols'], MAP_DATA[0]['rows']
+    cols, rows = 25, 15
     room_w, room_h = cols * TILE_SIZE, rows * TILE_SIZE
     
     player = Player(room_w, room_h)
@@ -584,7 +583,11 @@ def main():
                         elif app_state == APP_PLAYING:
                             if btn_close_settings_game.is_clicked(event, scaled_mouse_pos): current_overlay = None
                             if btn_return_main.is_clicked(event, scaled_mouse_pos):
-                                app_state = APP_MAIN_MENU; current_overlay = None; player = Player(room_w, room_h)
+                                app_state = APP_MAIN_MENU; current_overlay = None
+                                current_map_idx = -1 
+                                cols, rows = 25, 15
+                                room_w, room_h = cols * TILE_SIZE, rows * TILE_SIZE
+                                player = Player(room_w, room_h)
                                 bullets.clear(); enemies.clear(); room_state = ROOM_WAITING; current_play_time = 0.0
                                 cleared_rooms = [False] * len(MAP_DATA) 
 
@@ -626,23 +629,54 @@ def main():
                     else:
                         if btn_close_overlay.is_clicked(event, scaled_mouse_pos): 
                             current_overlay = None
-                        else:
-                            ts = large_font.render("진행상황 저장" if current_overlay == 'SAVE' else "게임 불러오기", True, (255, 255, 255))
-                            display_surface.blit(ts, (center_x - ts.get_width()//2, 170))
-                            for i in range(3): 
-                                slot_buttons[i].draw(display_surface, center_x, scaled_mouse_pos)
-                                if saves_data[f"slot_{i+1}"]: delete_buttons[i].draw(display_surface, center_x, scaled_mouse_pos)
-                            btn_close_overlay.draw(display_surface, center_x, scaled_mouse_pos)
+                            continue
+                            
+                        for i in range(3):
+                            slot_key = f"slot_{i+1}"
+                            if saves_data[slot_key] and delete_buttons[i].is_clicked(event, scaled_mouse_pos):
+                                confirm_delete_slot = i + 1; break 
+                            if slot_buttons[i].is_clicked(event, scaled_mouse_pos):
+                                if current_overlay == 'SAVE': confirm_save_slot = i + 1 
+                                elif current_overlay == 'LOAD' and saves_data[slot_key]:
+                                    sd = saves_data[slot_key]
+                                    current_map_idx = sd.get("map_idx", -1)
+                                    cleared_rooms = sd.get("cleared_rooms", [False] * len(MAP_DATA))
+                                    
+                                    if current_map_idx == -1:
+                                        cols, rows = 25, 15
+                                    else:
+                                        cols, rows = MAP_DATA[current_map_idx]['cols'], MAP_DATA[current_map_idx]['rows']
+                                        
+                                    room_w, room_h = cols * TILE_SIZE, rows * TILE_SIZE
+                                    
+                                    current_play_time = sd.get("play_time", 0.0)
+                                    player.pos.x, player.pos.y = sd["player_x"], sd["player_y"]
+                                    room_state = sd["room_state"]
+                                    
+                                    enemies.clear()
+                                    for e in sd["enemies"]:
+                                        en = Enemy(e["x"], e["y"], e.get("is_boss", False))
+                                        en.hp = e["hp"]
+                                        enemies.append(en)
+                                        
+                                    bullets.clear(); app_state = APP_PLAYING; current_overlay = None; break
 
             elif app_state == APP_MAIN_MENU:
                 if menu_btn_start.is_clicked(event, scaled_mouse_pos):
-                    current_map_idx = 0
+                    # [핵심] 게임 시작 시 무조건 -1(세이프존)에서 시작!
+                    current_map_idx = -1
                     cleared_rooms = [False] * len(MAP_DATA)
-                    cols, rows = MAP_DATA[0]['cols'], MAP_DATA[0]['rows']
+                    cols, rows = 25, 15
                     room_w, room_h = cols * TILE_SIZE, rows * TILE_SIZE
                     player = Player(room_w, room_h)
+                    
+                    # 캐릭터를 세이프존 위쪽(문 반대편)에 배치
+                    player.pos.x = room_w // 2
+                    player.pos.y = 90
+                    
                     bullets.clear(); enemies.clear()
-                    room_state = ROOM_WAITING; current_play_time = 0.0
+                    room_state = ROOM_CLEARED
+                    current_play_time = 0.0
                     app_state = APP_PLAYING
                 elif menu_btn_continue.is_clicked(event, scaled_mouse_pos): current_overlay = 'LOAD'
                 elif menu_btn_settings.is_clicked(event, scaled_mouse_pos): current_overlay = 'SETTINGS'
@@ -661,7 +695,6 @@ def main():
                         else: player.facing = 'down' if dy > 0 else 'up'
                         
                         if player.trigger_attack():
-                            # [수정] 220 사이즈에 맞게 히트박스 위치(오프셋)를 당겼습니다!
                             offset_x = 55
                             offset_y = 75
                             hx, hy = player.pos.x, player.pos.y
@@ -672,8 +705,6 @@ def main():
                             elif player.facing == 'down': hy += offset_y
                             
                             hitbox_pos = pygame.math.Vector2(hx, hy)
-                            
-                            # [수정] 220x220 이미지를 완벽하게 덮도록 반지름 110 적용
                             hitbox_radius = 110 
                             
                             for enemy in enemies[:]:
@@ -699,7 +730,9 @@ def main():
             else: camera_y = -(VIEW_H - room_h) // 2
 
             if room_state == ROOM_WAITING:
-                if not cleared_rooms[current_map_idx]: 
+                if current_map_idx == -1:
+                    room_state = ROOM_CLEARED # 세이프존은 무조건 클리어 상태
+                elif not cleared_rooms[current_map_idx]: 
                     room_state = ROOM_COMBAT
                     if current_map_idx == len(MAP_DATA) - 1:
                         enemies.append(Enemy(room_w // 2, room_h // 2, is_boss=True))
@@ -708,6 +741,7 @@ def main():
                         enemies.append(Enemy(spawn_margin_x, spawn_margin_y))
                         enemies.append(Enemy(room_w - spawn_margin_x, spawn_margin_y))
                         enemies.append(Enemy(room_w // 2, spawn_margin_y + 150))
+                        
             elif room_state == ROOM_COMBAT:
                 for enemy in enemies: enemy.update(dt, player.pos)
                 for bullet in bullets[:]:
@@ -722,14 +756,17 @@ def main():
                             break
                 if len(enemies) == 0: 
                     room_state = ROOM_CLEARED
-                    cleared_rooms[current_map_idx] = True
+                    if current_map_idx >= 0:
+                        cleared_rooms[current_map_idx] = True
                 
             elif room_state in [ROOM_WAITING, ROOM_CLEARED]:
                 for bullet in bullets[:]: bullet.update(dt)
                 
+                # [핵심] 방 이동 로직
                 if room_w//2 - 90 < player.pos.x < room_w//2 + 90:
-                    # [수정] 플레이어의 몸통(반지름 35)이 닿을 수 있도록 판정선을 30에서 40으로 당겼습니다!
-                    if player.pos.y < 40 and current_map_idx < len(MAP_DATA) - 1:
+                    
+                    # 1. 위쪽 문으로 이동 (다음 방으로 전진)
+                    if player.pos.y < 40 and current_map_idx >= 0 and current_map_idx < len(MAP_DATA) - 1:
                         current_map_idx += 1
                         cols, rows = MAP_DATA[current_map_idx]['cols'], MAP_DATA[current_map_idx]['rows']
                         room_w, room_h = cols * TILE_SIZE, rows * TILE_SIZE
@@ -737,14 +774,28 @@ def main():
                         room_state = ROOM_CLEARED if cleared_rooms[current_map_idx] else ROOM_WAITING
                         bullets.clear(); enemies.clear()
                     
-                    # [수정] 이전 방으로 돌아가는 문 판정도 room_h - 30 에서 room_h - 40 으로 수정!
-                    elif player.pos.y > room_h - 40 and current_map_idx > 0:
-                        current_map_idx -= 1
-                        cols, rows = MAP_DATA[current_map_idx]['cols'], MAP_DATA[current_map_idx]['rows']
-                        room_w, room_h = cols * TILE_SIZE, rows * TILE_SIZE
-                        player.pos.x, player.pos.y = room_w // 2, 90
-                        room_state = ROOM_CLEARED if cleared_rooms[current_map_idx] else ROOM_WAITING
-                        bullets.clear(); enemies.clear()
+                    # 2. 아래쪽 문으로 이동 (세이프존 탈출 혹은 이전 방으로 후퇴)
+                    # [수정] 1단계 방(current_map_idx == 0)은 제외합니다!
+                    elif player.pos.y > room_h - 40:
+                        if current_map_idx == -1: 
+                            # 세이프존(-1) -> 첫 번째 방(0) 진입
+                            current_map_idx = 0
+                            cols, rows = MAP_DATA[0]['cols'], MAP_DATA[0]['rows']
+                            room_w, room_h = cols * TILE_SIZE, rows * TILE_SIZE
+                            player.pos.x, player.pos.y = room_w // 2, room_h - 90 # 1단계 방의 아래에서 등장 (위로 진행하도록)
+                            room_state = ROOM_CLEARED if cleared_rooms[0] else ROOM_WAITING
+                            bullets.clear(); enemies.clear()
+                            
+                        elif current_map_idx > 0:
+                            # 2번 방 이상 -> 이전 방 진입
+                            current_map_idx -= 1
+                            cols, rows = MAP_DATA[current_map_idx]['cols'], MAP_DATA[current_map_idx]['rows']
+                            room_w, room_h = cols * TILE_SIZE, rows * TILE_SIZE
+                            player.pos.x, player.pos.y = room_w // 2, 90 # 위에서 등장
+                            room_state = ROOM_CLEARED if cleared_rooms[current_map_idx] else ROOM_WAITING
+                            bullets.clear(); enemies.clear()
+                            
+                        # (current_map_idx == 0 일 때는 아무 일도 일어나지 않음 = 문이 막혀있음)
 
         # ==================== 렌더링 (그리기) ====================
         display_surface.fill((0, 0, 0)) 
@@ -768,11 +819,18 @@ def main():
                 y_pos = i * TILE_SIZE - camera_y
                 pygame.draw.line(view_surface, GRID_COLOR, (-camera_x, y_pos), (room_w - camera_x, y_pos), 1)
 
-            door_color = DOOR_OPEN_COLOR if room_state in [ROOM_WAITING, ROOM_CLEARED] else DOOR_LOCKED_COLOR
-            if current_map_idx < len(MAP_DATA) - 1:
-                pygame.draw.rect(view_surface, door_color, (room_w//2 - 90 - camera_x, -camera_y, 180, 30))
-            if current_map_idx > 0:
-                pygame.draw.rect(view_surface, door_color, (room_w//2 - 90 - camera_x, room_h - 30 - camera_y, 180, 30))
+            # [문 그리기 수정]
+            if current_map_idx == -1:
+                # 세이프존일 때는 아래쪽 문 하나만 그립니다.
+                pygame.draw.rect(view_surface, DOOR_OPEN_COLOR, (room_w//2 - 90 - camera_x, room_h - 30 - camera_y, 180, 30))
+            else:
+                door_color = DOOR_OPEN_COLOR if room_state in [ROOM_WAITING, ROOM_CLEARED] else DOOR_LOCKED_COLOR
+                # 위쪽 문 (마지막 방이 아니면 그림)
+                if current_map_idx < len(MAP_DATA) - 1:
+                    pygame.draw.rect(view_surface, door_color, (room_w//2 - 90 - camera_x, -camera_y, 180, 30))
+                # 아래쪽 문 (1단계 방(0)에서는 그림 제외!)
+                if current_map_idx > 0:
+                    pygame.draw.rect(view_surface, door_color, (room_w//2 - 90 - camera_x, room_h - 30 - camera_y, 180, 30))
 
             if room_state == ROOM_COMBAT:
                 for enemy in enemies: enemy.draw(view_surface, camera_x, camera_y)
@@ -783,7 +841,8 @@ def main():
 
             display_surface.blit(font.render(f"진행 시간: {format_time(current_play_time)} | [ESC] 설정 | [Q] 저장", True, (200, 200, 200)), (40, 30))
             
-            map_name_str = MAP_DATA[current_map_idx]['name']
+            # [방 이름 설정] 세이프존 이름 명시
+            map_name_str = "나예 집" if current_map_idx == -1 else MAP_DATA[current_map_idx]['name']
             map_name_surf = large_font.render(f"- {map_name_str} -", True, (255, 255, 255))
             display_surface.blit(map_name_surf, (LOGICAL_WIDTH - map_name_surf.get_width() - 40, 20))
 
@@ -801,44 +860,46 @@ def main():
                 pygame.draw.rect(display_surface, (50, 50, 60), bg_rect, border_radius=5)
                 display_surface.blit(name_tag, name_rect)
 
-            minimap_room_size = 24  
-            minimap_margin = 8      
-            minimap_start_x = LOGICAL_WIDTH - 80 
-            minimap_start_y = 90    
+            # [미니맵] 세이프존에서는 UI를 깔끔하게 하기 위해 미니맵을 렌더링하지 않습니다.
+            if current_map_idx >= 0:
+                minimap_room_size = 24  
+                minimap_margin = 8      
+                minimap_start_x = LOGICAL_WIDTH - 80 
+                minimap_start_y = 90    
 
-            for i in range(len(MAP_DATA)):
-                draw_idx = (len(MAP_DATA) - 1) - i
-                rect_x = minimap_start_x
-                rect_y = minimap_start_y + i * (minimap_room_size + minimap_margin)
+                for i in range(len(MAP_DATA)):
+                    draw_idx = (len(MAP_DATA) - 1) - i
+                    rect_x = minimap_start_x
+                    rect_y = minimap_start_y + i * (minimap_room_size + minimap_margin)
 
-                is_cleared = cleared_rooms[draw_idx]
-                is_current = (draw_idx == current_map_idx)
-                is_adjacent = abs(draw_idx - current_map_idx) == 1 
-                
-                if not (is_cleared or is_current or is_adjacent): continue
+                    is_cleared = cleared_rooms[draw_idx]
+                    is_current = (draw_idx == current_map_idx)
+                    is_adjacent = abs(draw_idx - current_map_idx) == 1 
+                    
+                    if not (is_cleared or is_current or is_adjacent): continue
 
-                if i < len(MAP_DATA) - 1:
-                    next_draw_idx = draw_idx - 1
-                    next_is_visible = cleared_rooms[next_draw_idx] or (next_draw_idx == current_map_idx) or (abs(next_draw_idx - current_map_idx) == 1)
-                    if next_is_visible:
-                        pygame.draw.rect(display_surface, (100, 100, 100), 
-                                         (rect_x + minimap_room_size//2 - 2, rect_y + minimap_room_size, 4, minimap_margin))
+                    if i < len(MAP_DATA) - 1:
+                        next_draw_idx = draw_idx - 1
+                        next_is_visible = cleared_rooms[next_draw_idx] or (next_draw_idx == current_map_idx) or (abs(next_draw_idx - current_map_idx) == 1)
+                        if next_is_visible:
+                            pygame.draw.rect(display_surface, (100, 100, 100), 
+                                             (rect_x + minimap_room_size//2 - 2, rect_y + minimap_room_size, 4, minimap_margin))
 
-                if is_current:
-                    bg_color = (200, 200, 200)
-                    border_color = (255, 255, 255)
-                elif is_cleared:
-                    bg_color = (70, 70, 70)
-                    border_color = (130, 130, 130)
-                else: 
-                    bg_color = (30, 30, 30)
-                    border_color = (80, 80, 80)
+                    if is_current:
+                        bg_color = (200, 200, 200)
+                        border_color = (255, 255, 255)
+                    elif is_cleared:
+                        bg_color = (70, 70, 70)
+                        border_color = (130, 130, 130)
+                    else: 
+                        bg_color = (30, 30, 30)
+                        border_color = (80, 80, 80)
 
-                pygame.draw.rect(display_surface, bg_color, (rect_x, rect_y, minimap_room_size, minimap_room_size), border_radius=3)
-                pygame.draw.rect(display_surface, border_color, (rect_x, rect_y, minimap_room_size, minimap_room_size), 2, border_radius=3)
+                    pygame.draw.rect(display_surface, bg_color, (rect_x, rect_y, minimap_room_size, minimap_room_size), border_radius=3)
+                    pygame.draw.rect(display_surface, border_color, (rect_x, rect_y, minimap_room_size, minimap_room_size), 2, border_radius=3)
 
-                if is_current:
-                    pygame.draw.circle(display_surface, PLAYER_COLOR, (rect_x + minimap_room_size//2, rect_y + minimap_room_size//2), 5)
+                    if is_current:
+                        pygame.draw.circle(display_surface, PLAYER_COLOR, (rect_x + minimap_room_size//2, rect_y + minimap_room_size//2), 5)
 
         if current_overlay:
             overlay_bg = pygame.Surface((LOGICAL_WIDTH, LOGICAL_HEIGHT), pygame.SRCALPHA)
