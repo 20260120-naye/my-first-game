@@ -7,6 +7,8 @@
         "UP": 119,
         "DOWN": 115,
         "LEFT": 97,
-        "RIGHT": 100
+        "RIGHT": 100,
+        "INTERACT": 101,
+        "DASH": 32
     }
 }
