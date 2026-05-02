@@ -202,7 +202,6 @@ def load_images():
 
 # ==================== 설정(Config) 및 세이브 ====================
 CONFIG_FILE = "settings.json"
-# 👇 [수정] 단축키 설정에 상호작용(INTERACT)과 대시(DASH)를 포함시켰습니다.
 config = {
     'display_mode': 'WINDOW', 'volume': 50, 'combat_volume': 50, 'voice_volume': 50,
     'keys': {
@@ -365,7 +364,6 @@ class Player:
 
         move_x, move_y = 0, 0
 
-        # 👇 [수정] 대시(SPACE)도 설정에 등록한 키를 따라가도록 변경했습니다.
         if keys[config['keys']['DASH']] and self.dash_cooldown_left <= 0 and direction.length() > 0 and self.move_lock_timer <= 0 and not self.is_dashing:
             self.is_dashing = True
             self.dash_time_left = self.dash_duration
@@ -557,9 +555,7 @@ def update_display(mode):
     current_width, current_height = screen.get_width(), screen.get_height()
 
 def main():
-    global current_width, current_height, screen
-    # 👇 [수정] 메인 함수 안에서 전역 맵 변수를 수정할 수 있게 선언합니다!
-    global NAYE_HOME_MAP
+    global current_width, current_height, screen, NAYE_HOME_MAP
     
     load_config()
     update_display(config['display_mode'])
@@ -614,14 +610,15 @@ def main():
     btn_combat_vol_down = Button(-100, 440, 60, 60, "-", 40); btn_combat_vol_up = Button(100, 440, 60, 60, "+", 40)
     btn_voice_vol_down = Button(-100, 570, 60, 60, "-", 40); btn_voice_vol_up = Button(100, 570, 60, 60, "+", 40)
     
-    # 👇 [수정] 단축키가 예쁘게 들어가도록 버튼 위치와 크기를 새로 정렬했습니다. (2줄 형태)
+    # 👇 [핵심 변경] 단축키 버튼을 4열 2행으로 날씬하게 만들어 아주 여유롭게 배치했습니다! 
+    # (버튼 안의 글씨도 작게 만들어서 깔끔하게 보입니다)
     key_buttons = {
-        'UP': Button(-60, 260, 160, 50, ""), 
-        'DOWN': Button(-60, 340, 160, 50, ""), 
-        'LEFT': Button(-60, 420, 160, 50, ""), 
-        'RIGHT': Button(-60, 500, 160, 50, ""),
-        'INTERACT': Button(200, 260, 160, 50, ""),
-        'DASH': Button(200, 340, 160, 50, "")
+        'UP':       Button(-225, 340, 130, 45, "", 20), 
+        'DOWN':     Button(-75,  340, 130, 45, "", 20), 
+        'LEFT':     Button(75,   340, 130, 45, "", 20), 
+        'RIGHT':    Button(225,  340, 130, 45, "", 20),
+        'INTERACT': Button(-75,  450, 130, 45, "", 20),
+        'DASH':     Button(75,   450, 130, 45, "", 20)
     }
     key_labels_kr = {
         'UP': "위 이동", 'DOWN': "아래 이동", 'LEFT': "왼쪽 이동", 'RIGHT': "오른쪽 이동", 
@@ -664,7 +661,6 @@ def main():
                     elif current_overlay: current_overlay = None; waiting_for_key = None
                     elif app_state == APP_PLAYING: current_overlay = 'SETTINGS' 
                 
-                # 👇 [수정] 상호작용 키도 설정값(E키 등)을 따라가게 둡니다!
                 elif event.key == config['keys']['INTERACT'] and app_state == APP_PLAYING and not current_overlay:
                     if current_map_idx == -1: 
                         p_col, p_row = int(player.pos.x // TILE_SIZE), int(player.pos.y // TILE_SIZE)
@@ -726,7 +722,6 @@ def main():
                             display_surface.blit(txt3, (center_x - txt3.get_width()//2, 535))
                             btn_voice_vol_down.draw(display_surface, center_x, scaled_mouse_pos); btn_voice_vol_up.draw(display_surface, center_x, scaled_mouse_pos)
                         elif current_tab == "KEYS":
-                            # 이벤트 감지만 처리 (그리는 부분은 맨 아래쪽에 있습니다!)
                             for action, btn in key_buttons.items():
                                 if btn.is_clicked(event, scaled_mouse_pos): waiting_for_key = action
 
@@ -777,7 +772,6 @@ def main():
                                     player.inventory = sd.get("inventory", [None]*12)
                                     room_state = sd["room_state"]
                                     
-                                    # [버그 수정] 저장된 게임을 불러올 때도 맵을 완전히 새로고침한 후 가방을 지웁니다.
                                     NAYE_HOME_MAP = load_tiled_map(layer_files, 26, 15)
                                     
                                     if player.has_bag:
@@ -805,7 +799,6 @@ def main():
                     player.pos.x = room_w // 2
                     player.pos.y = 250
                     
-                    # 👇 [핵심 수정] 새로 시작하면 무조건 맵을 파일에서 새로 다시 읽어옵니다. (가방 상태 초기화!)
                     NAYE_HOME_MAP = load_tiled_map(layer_files, 26, 15)
                     
                     bullets.clear(); enemies.clear()
@@ -1007,7 +1000,6 @@ def main():
                                 break
                 
                 if is_near_interact:
-                    # 👇 [수정] 상호작용 알림이 설정한 키를 똑똑하게 읽어옵니다. (ex: E -> [E] 상호작용)
                     key_name = pygame.key.name(config['keys']['INTERACT']).upper()
                     prompt_surf = small_font.render(f"[{key_name}] 상호작용", True, (255, 255, 100))
                     draw_px = int(player.pos.x - camera_x) + VIEW_MARGIN_X
@@ -1020,12 +1012,11 @@ def main():
                     display_surface.blit(alpha_surf, bg_rect)
                     display_surface.blit(prompt_surf, prompt_surf.get_rect(center=(draw_px, draw_py)))
             
-            # 👇 [수정] 획득 메시지를 캐릭터 바로 위쪽에 작고 예쁘게 띄웁니다!
             if popup_timer > 0:
                 popup_timer -= dt
                 popup_surf = mini_font.render(popup_msg, True, (150, 255, 150))
                 draw_px = int(player.pos.x - camera_x) + VIEW_MARGIN_X
-                draw_py = int(player.pos.y - camera_y) + VIEW_MARGIN_Y - 70 # 상호작용 문구와 같은 높이 (어차피 가방 먹으면 문구가 사라짐)
+                draw_py = int(player.pos.y - camera_y) + VIEW_MARGIN_Y - 105 
                 
                 bg_rect = popup_surf.get_rect(center=(draw_px, draw_py))
                 bg_rect.inflate_ip(12, 8)
@@ -1034,7 +1025,6 @@ def main():
                 display_surface.blit(alpha_surf, bg_rect)
                 display_surface.blit(popup_surf, popup_surf.get_rect(center=(draw_px, draw_py)))
 
-            # 👇 [핵심 수정] 가방을 먹었다면 오른쪽 빈 공간에 인벤토리 슬롯 12칸을 띄웁니다!
             if player.has_bag:
                 inv_cols = 3
                 inv_rows = 4
@@ -1045,7 +1035,7 @@ def main():
                 inv_h = (slot_size * inv_rows) + (slot_margin * (inv_rows + 1)) + 50
                 
                 inv_x = LOGICAL_WIDTH - inv_w - 40
-                inv_y = 330 # 안정감 있는 살짝 아래 위치
+                inv_y = 330 
                 
                 inv_surf = pygame.Surface((inv_w, inv_h), pygame.SRCALPHA)
                 pygame.draw.rect(inv_surf, (30, 30, 35, 220), inv_surf.get_rect(), border_radius=15)
@@ -1128,11 +1118,8 @@ def main():
             pygame.draw.rect(display_surface, (200, 200, 200), (center_x - 350, 150, 700, 600), 3, border_radius=15)
 
             if current_overlay == 'SETTINGS':
-                # 👇 [수정] 설정창에 제목을 그리고 단축키를 화면에 렌더링하는 코드를 복구했습니다.
+                # 👇 [핵심 수정] 단축키 설정 탭 화면 그리기 로직 (1줄에 4개씩, 글씨는 버튼 위로!)
                 if current_tab == "KEYS":
-                    title_surf = large_font.render("- 단축키 설정 -", True, (255, 255, 255))
-                    display_surface.blit(title_surf, (center_x - title_surf.get_width()//2, 180))
-                    
                     for action, btn in key_buttons.items():
                         key_val = config['keys'][action]
                         key_name = pygame.key.name(key_val).upper()
@@ -1146,8 +1133,11 @@ def main():
                         
                         btn.draw(display_surface, center_x, scaled_mouse_pos)
                         
-                        lbl_surf = font.render(key_labels_kr[action], True, (255, 255, 255))
-                        display_surface.blit(lbl_surf, (center_x + btn.rel_x - btn.w//2 - lbl_surf.get_width() - 15, btn.rect.centery - lbl_surf.get_height()//2 - 5))
+                        # 이름표 렌더링 (버튼 바로 위쪽 가운데 정렬)
+                        lbl_surf = small_font.render(key_labels_kr[action], True, (255, 255, 255))
+                        lbl_x = center_x + btn.rel_x - lbl_surf.get_width() // 2
+                        lbl_y = btn.rect.y - lbl_surf.get_height() - 8
+                        display_surface.blit(lbl_surf, (lbl_x, lbl_y))
 
                 btn_video.draw(display_surface, center_x, scaled_mouse_pos)
                 btn_audio.draw(display_surface, center_x, scaled_mouse_pos)
