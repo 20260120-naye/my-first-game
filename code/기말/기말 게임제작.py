@@ -131,6 +131,15 @@ def load_images():
     except Exception as e:
         pass
 
+    # 👇 [핵심 추가] 두 가지 마우스 커서 이미지를 로드합니다!
+    try:
+        cursor_norm = pygame.image.load("./code/기말/assets/image/마우스_기본.png").convert_alpha()
+        IMAGES['cursor_normal'] = pygame.transform.scale(cursor_norm, (28, 28))
+        cursor_clk = pygame.image.load("./code/기말/assets/image/마우스_클릭.png").convert_alpha()
+        IMAGES['cursor_click'] = pygame.transform.scale(cursor_clk, (28, 28))
+    except Exception as e:
+        pass
+
     try:
         idle_1 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/대기 모션_1.png").convert_alpha(), (65, 65))
         idle_2 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/대기 모션_2.png").convert_alpha(), (65, 65))
@@ -581,6 +590,9 @@ def main():
     saves_data = get_save_data(); current_play_time = 0.0
     camera_x, camera_y = 0, 0
     
+    # 👇 [핵심 추가] 마우스 클릭 상태를 추적할 변수를 만들었습니다.
+    is_mouse_down = False
+    
     popup_msg = ""
     popup_timer = 0.0
     
@@ -610,8 +622,6 @@ def main():
     btn_combat_vol_down = Button(-100, 440, 60, 60, "-", 40); btn_combat_vol_up = Button(100, 440, 60, 60, "+", 40)
     btn_voice_vol_down = Button(-100, 570, 60, 60, "-", 40); btn_voice_vol_up = Button(100, 570, 60, 60, "+", 40)
     
-    # 👇 [핵심 변경] 단축키 버튼을 4열 2행으로 날씬하게 만들어 아주 여유롭게 배치했습니다! 
-    # (버튼 안의 글씨도 작게 만들어서 깔끔하게 보입니다)
     key_buttons = {
         'UP':       Button(-225, 340, 130, 45, "", 20), 
         'DOWN':     Button(-75,  340, 130, 45, "", 20), 
@@ -653,6 +663,12 @@ def main():
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT: running = False
+            
+            # 👇 [핵심 추가] 마우스를 누르고 떼는 이벤트를 감지합니다.
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                is_mouse_down = True
+            if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+                is_mouse_down = False
             
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
@@ -1016,7 +1032,7 @@ def main():
                 popup_timer -= dt
                 popup_surf = mini_font.render(popup_msg, True, (150, 255, 150))
                 draw_px = int(player.pos.x - camera_x) + VIEW_MARGIN_X
-                draw_py = int(player.pos.y - camera_y) + VIEW_MARGIN_Y - 105 
+                draw_py = int(player.pos.y - camera_y) + VIEW_MARGIN_Y - 70 
                 
                 bg_rect = popup_surf.get_rect(center=(draw_px, draw_py))
                 bg_rect.inflate_ip(12, 8)
@@ -1118,7 +1134,6 @@ def main():
             pygame.draw.rect(display_surface, (200, 200, 200), (center_x - 350, 150, 700, 600), 3, border_radius=15)
 
             if current_overlay == 'SETTINGS':
-                # 👇 [핵심 수정] 단축키 설정 탭 화면 그리기 로직 (1줄에 4개씩, 글씨는 버튼 위로!)
                 if current_tab == "KEYS":
                     for action, btn in key_buttons.items():
                         key_val = config['keys'][action]
@@ -1133,7 +1148,6 @@ def main():
                         
                         btn.draw(display_surface, center_x, scaled_mouse_pos)
                         
-                        # 이름표 렌더링 (버튼 바로 위쪽 가운데 정렬)
                         lbl_surf = small_font.render(key_labels_kr[action], True, (255, 255, 255))
                         lbl_x = center_x + btn.rel_x - lbl_surf.get_width() // 2
                         lbl_y = btn.rect.y - lbl_surf.get_height() - 8
@@ -1181,6 +1195,21 @@ def main():
                             slot_buttons[i].draw(display_surface, center_x, scaled_mouse_pos)
                             if saves_data[f"slot_{i+1}"]: delete_buttons[i].draw(display_surface, center_x, scaled_mouse_pos)
                         btn_close_overlay.draw(display_surface, center_x, scaled_mouse_pos)
+
+        # 👇 [핵심 추가] 게임 화면을 모두 그린 후, 가장 마지막에 커스텀 마우스 커서를 그려줍니다!
+        if 'cursor_normal' in IMAGES and 'cursor_click' in IMAGES:
+            # 윈도우 기본 마우스를 항상 숨김 처리합니다.
+            pygame.mouse.set_visible(False)
+            
+            # 마우스가 눌려있는지 여부에 따라 커서 모양을 결정합니다.
+            current_cursor = IMAGES['cursor_click'] if is_mouse_down else IMAGES['cursor_normal']
+            
+            # 마우스 현재 좌표(스케일 적용된 값)에 커서 이미지를 출력합니다.
+            cx, cy = scaled_mouse_pos
+            display_surface.blit(current_cursor, (cx, cy))
+        else:
+            # 커서 이미지가 없으면 오류가 나지 않도록 다시 기본 윈도우 마우스를 보여줍니다.
+            pygame.mouse.set_visible(True)
 
         screen.blit(pygame.transform.scale(display_surface, (current_width, current_height)), (0, 0))
         pygame.display.flip()
