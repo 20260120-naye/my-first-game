@@ -3,6 +3,7 @@ import pygame
 import sys
 import json
 import csv  # Tiled CSV 파일을 읽기 위한 모듈
+import math # 👇 [추가] 화살표가 둥둥 떠다니는 애니메이션(싸인 그래프)을 만들기 위해 추가했습니다.
 
 # Pygame 초기화
 pygame.init()
@@ -89,7 +90,9 @@ def load_tiled_map(filepaths, default_cols=26, default_rows=15):
                             raw_val = int(val_str)
                             real_val = raw_val & 0x0FFFFFFF
                             
-                            if real_val != -1 and real_val != 0: 
+                            if real_val == 2:
+                                combined_map[row_idx][col_idx] = 2
+                            elif real_val != -1 and real_val != 0: 
                                 combined_map[row_idx][col_idx] = 1
             except Exception as e:
                 print(f"맵 로딩 오류 ({filepath}): {e}")
@@ -126,7 +129,6 @@ def load_images():
     except Exception as e:
         pass
 
-    # 👇 [수정] 대기 모션 이미지 축소 (90x90 -> 65x65)
     try:
         idle_1 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/대기 모션_1.png").convert_alpha(), (65, 65))
         idle_2 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/대기 모션_2.png").convert_alpha(), (65, 65))
@@ -135,7 +137,6 @@ def load_images():
     except Exception as e:
         pass
 
-    # 👇 [수정] 걷기 모션 이미지 축소 (80x80 -> 60x60)
     try:
         run_1 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/걷기 모션_1.png").convert_alpha(), (60, 60))
         run_2 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/걷기 모션_2.png").convert_alpha(), (60, 60))
@@ -153,7 +154,6 @@ def load_images():
     except Exception as e:
         pass
 
-    # 👇 [수정] 뒷면 걷기 모션 축소 (80x80 -> 60x60)
     try:
         up_1 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/뒷면 걷기_1.png").convert_alpha(), (60, 60))
         up_2 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/뒷면 걷기_2.png").convert_alpha(), (60, 60))
@@ -162,7 +162,6 @@ def load_images():
     except Exception as e:
         pass
 
-    # 👇 [수정] 정면 걷기 모션 축소 (80x80 -> 60x60, 75x75 -> 55x55)
     try:
         down_1 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/정면 걷기_1.png").convert_alpha(), (60, 60))
         down_2 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/정면 걷기_2.png").convert_alpha(), (60, 60))
@@ -174,10 +173,10 @@ def load_images():
         pass
 
     try:
-        att1_1 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 오_왼_1.png").convert_alpha(), (140, 140))
-        att1_2 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 오_왼_2.png").convert_alpha(), (140, 140))
-        att1_3 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 오_왼_3.png").convert_alpha(), (140, 140))
-        att1_4 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 오_왼_4.png").convert_alpha(), (140, 140))
+        att1_1 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 오_왼_1.png").convert_alpha(), (180, 180))
+        att1_2 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 오_왼_2.png").convert_alpha(), (180, 180))
+        att1_3 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 오_왼_3.png").convert_alpha(), (180, 180))
+        att1_4 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 오_왼_4.png").convert_alpha(), (180, 180))
         
         IMAGES['attack_1_right'] = [att1_1, att1_2, att1_3, att1_4]
         
@@ -185,10 +184,10 @@ def load_images():
         IMAGES['attack_1_up'] = [pygame.transform.rotate(img, 90) for img in IMAGES['attack_1_right']]
         IMAGES['attack_1_down'] = [pygame.transform.rotate(img, -90) for img in IMAGES['attack_1_right']]
 
-        att2_1 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 왼_오_1.png").convert_alpha(), (140, 140))
-        att2_2 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 왼_오_2.png").convert_alpha(), (140, 140))
-        att2_3 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 왼_오_3.png").convert_alpha(), (140, 140))
-        att2_4 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 왼_오_4.png").convert_alpha(), (140, 140))
+        att2_1 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 왼_오_1.png").convert_alpha(), (180, 180))
+        att2_2 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 왼_오_2.png").convert_alpha(), (180, 180))
+        att2_3 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 왼_오_3.png").convert_alpha(), (180, 180))
+        att2_4 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 왼_오_4.png").convert_alpha(), (180, 180))
         
         IMAGES['attack_2_right'] = [att2_1, att2_2, att2_3, att2_4]
         
@@ -267,8 +266,6 @@ class Player:
         self.pos = pygame.math.Vector2(room_w // 2, room_h - 90)
         self.normal_speed = 350
         self.speed = self.normal_speed
-        
-        # 👇 [수정] 캐릭터 충돌 판정(어깨너비)을 더 작게 줄여서 좁은 틈을 잘 빠져나가게 했습니다! (15 -> 12)
         self.radius = 12 
         
         self.is_dashing = False
@@ -490,9 +487,8 @@ class Player:
                 
                 attack_img = attack_anim_list[att_frame]
                 
-                # 👇 [수정] 캐릭터가 작아졌으므로 칼이 몸에서 나가는 거리(offset)도 몸 쪽으로 땡겨줍니다. (35,50 -> 30,40)
-                offset_x = 30  
-                offset_y = 40  
+                offset_x = 45  
+                offset_y = 60  
                 
                 ax, ay = draw_x, draw_y
                 if self.facing == 'right': ax += offset_x
@@ -579,6 +575,7 @@ def main():
     title_font = get_korean_font(100, bold=True)
     font = get_korean_font(30)
     large_font = get_korean_font(40)
+    small_font = get_korean_font(20)
 
     current_overlay = None; current_tab = "VIDEO"; waiting_for_key = None
     confirm_delete_slot = None; confirm_save_slot = None
@@ -638,8 +635,19 @@ def main():
                     elif confirm_save_slot: confirm_save_slot = None
                     elif current_overlay: current_overlay = None; waiting_for_key = None
                     elif app_state == APP_PLAYING: current_overlay = 'SETTINGS' 
-                elif event.key == pygame.K_q and app_state == APP_PLAYING and not current_overlay:
-                    current_overlay = 'SAVE'
+                
+                elif event.key == pygame.K_e and app_state == APP_PLAYING and not current_overlay:
+                    if current_map_idx == -1: 
+                        p_col, p_row = int(player.pos.x // TILE_SIZE), int(player.pos.y // TILE_SIZE)
+                        
+                        for r in range(max(0, p_row-1), min(len(NAYE_HOME_MAP), p_row+2)):
+                            for c in range(max(0, p_col-1), min(len(NAYE_HOME_MAP[0]), p_col+2)):
+                                if NAYE_HOME_MAP[r][c] == 2: 
+                                    tc_x = c * TILE_SIZE + TILE_SIZE / 2
+                                    tc_y = r * TILE_SIZE + TILE_SIZE / 2
+                                    if pygame.math.Vector2(tc_x, tc_y).distance_to(player.pos) < 55:
+                                        current_overlay = 'SAVE'
+                                        break
 
             if current_overlay:
                 if current_overlay == 'SETTINGS':
@@ -765,9 +773,8 @@ def main():
                         else: player.facing = 'down' if dy > 0 else 'up'
                         
                         if player.trigger_attack():
-                            # 👇 [수정] 작아진 캐릭터 크기에 맞춰 공격 위치도 몸 쪽으로 땡겨줌 (30, 40)
-                            offset_x = 30
-                            offset_y = 40
+                            offset_x = 45
+                            offset_y = 60
                             hx, hy = player.pos.x, player.pos.y
                             
                             if player.facing == 'right': hx += offset_x
@@ -776,7 +783,7 @@ def main():
                             elif player.facing == 'down': hy += offset_y
                             
                             hitbox_pos = pygame.math.Vector2(hx, hy)
-                            hitbox_radius = 70 
+                            hitbox_radius = 90 
                             
                             for enemy in enemies[:]:
                                 if hitbox_pos.distance_to(enemy.pos) < hitbox_radius + enemy.radius:
@@ -896,6 +903,32 @@ def main():
                 if 'naye_home_bg' in IMAGES:
                     view_surface.blit(IMAGES['naye_home_bg'], (-camera_x, -camera_y))
 
+                # 👇 [추가] 2번 타일(상호작용) 위에 둥둥 떠다니는 화살표 마크를 그립니다.
+                start_col = max(0, int(camera_x // TILE_SIZE))
+                end_col = min(len(NAYE_HOME_MAP[0]), int((camera_x + VIEW_W) // TILE_SIZE) + 1)
+                start_row = max(0, int(camera_y // TILE_SIZE))
+                end_row = min(len(NAYE_HOME_MAP), int((camera_y + VIEW_H) // TILE_SIZE) + 1)
+                
+                for row_idx in range(start_row, end_row):
+                    for col_idx in range(start_col, end_col):
+                        tile_val = NAYE_HOME_MAP[row_idx][col_idx]
+                        if tile_val == 2:
+                            x = col_idx * TILE_SIZE - camera_x
+                            y = row_idx * TILE_SIZE - camera_y
+                            
+                            # 너무 크지 않고 딱 인지할 정도의 작고 귀여운 화살표 (가로 12px, 세로 8px)
+                            floating_offset = math.sin(pygame.time.get_ticks() * 0.005) * 3
+                            cx = x + TILE_SIZE / 2
+                            
+                            p1 = (cx - 6, y - 10 + floating_offset) # 왼쪽 위
+                            p2 = (cx + 6, y - 10 + floating_offset) # 오른쪽 위
+                            p3 = (cx, y - 2 + floating_offset)      # 아래쪽 뾰족한 끝
+                            
+                            # 노란색 화살표 그리기
+                            pygame.draw.polygon(view_surface, (255, 255, 100), [p1, p2, p3])
+                            # 잘 보이도록 어두운 테두리 그리기
+                            pygame.draw.polygon(view_surface, (150, 150, 50), [p1, p2, p3], 1)
+
             if room_state == ROOM_COMBAT:
                 for enemy in enemies: enemy.draw(view_surface, camera_x, camera_y)
             for bullet in bullets: bullet.draw(view_surface, camera_x, camera_y)
@@ -903,7 +936,33 @@ def main():
 
             display_surface.blit(view_surface, (VIEW_MARGIN_X, VIEW_MARGIN_Y))
 
-            display_surface.blit(font.render(f"진행 시간: {format_time(current_play_time)} | [ESC] 설정 | [Q] 저장", True, (200, 200, 200)), (40, 30))
+            display_surface.blit(font.render(f"진행 시간: {format_time(current_play_time)} | [ESC] 설정", True, (200, 200, 200)), (40, 30))
+            
+            # 👇 [수정] 안내 문구를 작고 간결하게 줄였습니다!
+            if app_state == APP_PLAYING and current_map_idx == -1 and not current_overlay:
+                p_col, p_row = int(player.pos.x // TILE_SIZE), int(player.pos.y // TILE_SIZE)
+                is_near_save = False
+                for r in range(max(0, p_row-1), min(len(NAYE_HOME_MAP), p_row+2)):
+                    for c in range(max(0, p_col-1), min(len(NAYE_HOME_MAP[0]), p_col+2)):
+                        if NAYE_HOME_MAP[r][c] == 2:
+                            tc_x = c * TILE_SIZE + TILE_SIZE / 2
+                            tc_y = r * TILE_SIZE + TILE_SIZE / 2
+                            if pygame.math.Vector2(tc_x, tc_y).distance_to(player.pos) < 55:
+                                is_near_save = True
+                                break
+                
+                if is_near_save:
+                    # 폰트를 small_font로 사용하고, (저장) 글씨는 뺐습니다.
+                    prompt_surf = small_font.render("[E] 상호작용", True, (255, 255, 100))
+                    draw_px = int(player.pos.x - camera_x) + VIEW_MARGIN_X
+                    draw_py = int(player.pos.y - camera_y) + VIEW_MARGIN_Y - 70 
+                    
+                    bg_rect = prompt_surf.get_rect(center=(draw_px, draw_py))
+                    bg_rect.inflate_ip(10, 10)
+                    alpha_surf = pygame.Surface(bg_rect.size, pygame.SRCALPHA)
+                    pygame.draw.rect(alpha_surf, (40, 40, 45, 180), alpha_surf.get_rect(), border_radius=5)
+                    display_surface.blit(alpha_surf, bg_rect)
+                    display_surface.blit(prompt_surf, prompt_surf.get_rect(center=(draw_px, draw_py)))
             
             map_name_str = "나예 집" if current_map_idx == -1 else MAP_DATA[current_map_idx]['name']
             map_name_surf = large_font.render(f"- {map_name_str} -", True, (255, 255, 255))
