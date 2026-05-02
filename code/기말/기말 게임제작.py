@@ -89,13 +89,11 @@ def load_tiled_map(filepaths, default_cols=26, default_rows=15):
                             raw_val = int(val_str)
                             real_val = raw_val & 0x0FFFFFFF
                             
-                            # 빈 공간(-1, 0)이 아니면 무조건 벽(1)으로 통일!
                             if real_val != -1 and real_val != 0: 
                                 combined_map[row_idx][col_idx] = 1
             except Exception as e:
                 print(f"맵 로딩 오류 ({filepath}): {e}")
 
-    # 파일이 하나도 없을 경우 기본 테두리 방을 만들어 줍니다.
     if not loaded_any:
         print("맵 파일이 없습니다. 임시 26x15 맵을 생성합니다.")
         combined_map = [[0 for _ in range(default_cols)] for _ in range(default_rows)]
@@ -106,7 +104,6 @@ def load_tiled_map(filepaths, default_cols=26, default_rows=15):
 
     return combined_map
 
-# 벽 역할을 할 충돌 CSV 파일 불러오기
 layer_files = [
     "./code/기말/assets/naye_home/나예집_충돌.csv"
 ]
@@ -117,12 +114,11 @@ NAYE_HOME_MAP = load_tiled_map(layer_files, 26, 15)
 IMAGES = {}
 
 def load_images():
-    # 배경 이미지 불러오기
     try:
         bg_img = pygame.image.load("./code/기말/assets/naye_home/나예집_배경.png").convert_alpha()
         IMAGES['naye_home_bg'] = pygame.transform.scale(bg_img, (26 * TILE_SIZE, 15 * TILE_SIZE))
     except Exception as e:
-        print("배경 이미지 로드 실패 (파일 이름을 확인하세요):", e)
+        pass
 
     try:
         naye_base = pygame.image.load("./code/기말/assets/image/나예 기본.png").convert_alpha()
@@ -130,21 +126,23 @@ def load_images():
     except Exception as e:
         pass
 
+    # 👇 [수정] 대기 모션 이미지 축소 (90x90 -> 65x65)
     try:
-        idle_1 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/대기 모션_1.png").convert_alpha(), (90, 90))
-        idle_2 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/대기 모션_2.png").convert_alpha(), (90, 90))
-        idle_3 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/대기 모션_3.png").convert_alpha(), (90, 90))
+        idle_1 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/대기 모션_1.png").convert_alpha(), (65, 65))
+        idle_2 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/대기 모션_2.png").convert_alpha(), (65, 65))
+        idle_3 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/대기 모션_3.png").convert_alpha(), (65, 65))
         IMAGES['player_idle'] = [idle_1, idle_2, idle_2, idle_3, idle_3, idle_2, idle_2, idle_1]
     except Exception as e:
         pass
 
+    # 👇 [수정] 걷기 모션 이미지 축소 (80x80 -> 60x60)
     try:
-        run_1 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/걷기 모션_1.png").convert_alpha(), (80, 80))
-        run_2 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/걷기 모션_2.png").convert_alpha(), (80, 80))
-        run_3 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/걷기 모션_3.png").convert_alpha(), (80, 80))
-        run_4 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/걷기 모션_4.png").convert_alpha(), (80, 80))
-        run_5 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/걷기 모션_5.png").convert_alpha(), (80, 80))
-        run_6 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/걷기 모션_6.png").convert_alpha(), (80, 80))
+        run_1 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/걷기 모션_1.png").convert_alpha(), (60, 60))
+        run_2 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/걷기 모션_2.png").convert_alpha(), (60, 60))
+        run_3 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/걷기 모션_3.png").convert_alpha(), (60, 60))
+        run_4 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/걷기 모션_4.png").convert_alpha(), (60, 60))
+        run_5 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/걷기 모션_5.png").convert_alpha(), (60, 60))
+        run_6 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/걷기 모션_6.png").convert_alpha(), (60, 60))
 
         IMAGES['player_run_right'] = [run_1, run_2, run_2, run_1, run_1, run_3, run_3, run_1, run_1, run_4, run_4, run_1, run_1, run_5, run_5, run_1, run_1, run_6, run_6, run_1]
         
@@ -155,29 +153,31 @@ def load_images():
     except Exception as e:
         pass
 
+    # 👇 [수정] 뒷면 걷기 모션 축소 (80x80 -> 60x60)
     try:
-        up_1 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/뒷면 걷기_1.png").convert_alpha(), (80, 80))
-        up_2 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/뒷면 걷기_2.png").convert_alpha(), (80, 80))
-        up_3 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/뒷면 걷기_3.png").convert_alpha(), (80, 80))
+        up_1 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/뒷면 걷기_1.png").convert_alpha(), (60, 60))
+        up_2 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/뒷면 걷기_2.png").convert_alpha(), (60, 60))
+        up_3 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/뒷면 걷기_3.png").convert_alpha(), (60, 60))
         IMAGES['player_run_up'] = [up_1, up_2, up_2, up_3, up_3, up_2, up_2, up_1] 
     except Exception as e:
         pass
 
+    # 👇 [수정] 정면 걷기 모션 축소 (80x80 -> 60x60, 75x75 -> 55x55)
     try:
-        down_1 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/정면 걷기_1.png").convert_alpha(), (80, 80))
-        down_2 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/정면 걷기_2.png").convert_alpha(), (80, 80))
-        down_3 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/정면 걷기_3.png").convert_alpha(), (80, 80))
-        down_4 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/정면 걷기_4.png").convert_alpha(), (75, 75))
-        down_5 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/정면 걷기_5.png").convert_alpha(), (75, 75))
+        down_1 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/정면 걷기_1.png").convert_alpha(), (60, 60))
+        down_2 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/정면 걷기_2.png").convert_alpha(), (60, 60))
+        down_3 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/정면 걷기_3.png").convert_alpha(), (60, 60))
+        down_4 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/정면 걷기_4.png").convert_alpha(), (55, 55))
+        down_5 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/정면 걷기_5.png").convert_alpha(), (55, 55))
         IMAGES['player_run_down'] = [down_1, down_2, down_2, down_3, down_3, down_4, down_4, down_5, down_5, down_1] 
     except Exception as e:
         pass
 
     try:
-        att1_1 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 오_왼_1.png").convert_alpha(), (220, 220))
-        att1_2 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 오_왼_2.png").convert_alpha(), (220, 220))
-        att1_3 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 오_왼_3.png").convert_alpha(), (220, 220))
-        att1_4 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 오_왼_4.png").convert_alpha(), (220, 220))
+        att1_1 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 오_왼_1.png").convert_alpha(), (140, 140))
+        att1_2 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 오_왼_2.png").convert_alpha(), (140, 140))
+        att1_3 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 오_왼_3.png").convert_alpha(), (140, 140))
+        att1_4 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 오_왼_4.png").convert_alpha(), (140, 140))
         
         IMAGES['attack_1_right'] = [att1_1, att1_2, att1_3, att1_4]
         
@@ -185,10 +185,10 @@ def load_images():
         IMAGES['attack_1_up'] = [pygame.transform.rotate(img, 90) for img in IMAGES['attack_1_right']]
         IMAGES['attack_1_down'] = [pygame.transform.rotate(img, -90) for img in IMAGES['attack_1_right']]
 
-        att2_1 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 왼_오_1.png").convert_alpha(), (220, 220))
-        att2_2 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 왼_오_2.png").convert_alpha(), (220, 220))
-        att2_3 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 왼_오_3.png").convert_alpha(), (220, 220))
-        att2_4 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 왼_오_4.png").convert_alpha(), (220, 220))
+        att2_1 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 왼_오_1.png").convert_alpha(), (140, 140))
+        att2_2 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 왼_오_2.png").convert_alpha(), (140, 140))
+        att2_3 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 왼_오_3.png").convert_alpha(), (140, 140))
+        att2_4 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/공격 왼_오_4.png").convert_alpha(), (140, 140))
         
         IMAGES['attack_2_right'] = [att2_1, att2_2, att2_3, att2_4]
         
@@ -265,12 +265,14 @@ class Button:
 class Player:
     def __init__(self, room_w, room_h):
         self.pos = pygame.math.Vector2(room_w // 2, room_h - 90)
-        self.normal_speed = 600
+        self.normal_speed = 350
         self.speed = self.normal_speed
-        self.radius = 15 
+        
+        # 👇 [수정] 캐릭터 충돌 판정(어깨너비)을 더 작게 줄여서 좁은 틈을 잘 빠져나가게 했습니다! (15 -> 12)
+        self.radius = 12 
         
         self.is_dashing = False
-        self.dash_speed = 1100            
+        self.dash_speed = 700            
         self.dash_duration = 0.15         
         self.dash_cooldown = 1.0          
         self.dash_time_left = 0           
@@ -488,8 +490,9 @@ class Player:
                 
                 attack_img = attack_anim_list[att_frame]
                 
-                offset_x = 55  
-                offset_y = 75  
+                # 👇 [수정] 캐릭터가 작아졌으므로 칼이 몸에서 나가는 거리(offset)도 몸 쪽으로 땡겨줍니다. (35,50 -> 30,40)
+                offset_x = 30  
+                offset_y = 40  
                 
                 ax, ay = draw_x, draw_y
                 if self.facing == 'right': ax += offset_x
@@ -516,10 +519,10 @@ class Enemy:
         self.pos = pygame.math.Vector2(x, y)
         self.is_boss = is_boss
         if is_boss:
-            self.speed, self.radius, self.hp, self.max_hp = 180, 30, 50, 50 
+            self.speed, self.radius, self.hp, self.max_hp = 120, 30, 50, 50 
             self.color = BOSS_COLOR
         else:
-            self.speed, self.radius, self.hp, self.max_hp = 270, 14, 5, 5 
+            self.speed, self.radius, self.hp, self.max_hp = 200, 14, 5, 5 
             self.color = ENEMY_COLOR
     def update(self, dt, target_pos):
         direction = target_pos - self.pos
@@ -739,7 +742,6 @@ def main():
                     player = Player(room_w, room_h)
                     
                     player.pos.x = room_w // 2
-                    # 👇 [수정] 캐릭터 시작 위치를 중앙 근처(250)로 시원하게 내렸습니다!
                     player.pos.y = 250
                     
                     bullets.clear(); enemies.clear()
@@ -763,8 +765,9 @@ def main():
                         else: player.facing = 'down' if dy > 0 else 'up'
                         
                         if player.trigger_attack():
-                            offset_x = 55
-                            offset_y = 75
+                            # 👇 [수정] 작아진 캐릭터 크기에 맞춰 공격 위치도 몸 쪽으로 땡겨줌 (30, 40)
+                            offset_x = 30
+                            offset_y = 40
                             hx, hy = player.pos.x, player.pos.y
                             
                             if player.facing == 'right': hx += offset_x
@@ -773,7 +776,7 @@ def main():
                             elif player.facing == 'down': hy += offset_y
                             
                             hitbox_pos = pygame.math.Vector2(hx, hy)
-                            hitbox_radius = 110 
+                            hitbox_radius = 70 
                             
                             for enemy in enemies[:]:
                                 if hitbox_pos.distance_to(enemy.pos) < hitbox_radius + enemy.radius:
@@ -892,8 +895,6 @@ def main():
             else:
                 if 'naye_home_bg' in IMAGES:
                     view_surface.blit(IMAGES['naye_home_bg'], (-camera_x, -camera_y))
-                
-                # 👇 [삭제] 빨간색 테스트 네모 그리는 코드(for문)를 통째로 날렸습니다!
 
             if room_state == ROOM_COMBAT:
                 for enemy in enemies: enemy.draw(view_surface, camera_x, camera_y)
