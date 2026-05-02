@@ -58,7 +58,7 @@ TILE_SIZE = 32
 
 MAP_DATA = [
     {"name": "교실", "cols": 40, "rows": 30},
-    {"name": "화장실", "cols": 25, "rows": 15},
+    {"name": "화장실", "cols": 26, "rows": 15}, # 👈 25에서 26으로 짝수화!
     {"name": "보건실", "cols": 20, "rows": 30},
     {"name": "체육관", "cols": 60, "rows": 60},
     {"name": "급식실", "cols": 50, "rows": 60},
@@ -68,8 +68,8 @@ MAP_DATA = [
 ]
 
 # ==================== Tiled 맵 불러오기 함수 ====================
-# 👇 [수정] 맵 기본 크기를 25x15로 맞췄습니다!
-def load_tiled_map(filepath, default_cols=25, default_rows=15):
+# 👇 기본 맵 크기도 짝수인 26x15로 맞춤
+def load_tiled_map(filepath, default_cols=26, default_rows=15):
     map_data = []
     if os.path.exists(filepath):
         try:
@@ -81,7 +81,7 @@ def load_tiled_map(filepath, default_cols=25, default_rows=15):
         except Exception as e:
             print(f"맵 로딩 오류: {e}")
             
-    print("맵 파일이 없습니다. 임시 25x15 맵을 생성합니다.")
+    print("맵 파일이 없습니다. 임시 26x15 맵을 생성합니다.")
     map_data = [[0 for _ in range(default_cols)] for _ in range(default_rows)]
     for i in range(default_cols):
         map_data[0][i] = 1 # 윗벽
@@ -90,15 +90,15 @@ def load_tiled_map(filepath, default_cols=25, default_rows=15):
         map_data[i][0] = 1 # 왼쪽 벽
         map_data[i][default_cols-1] = 1 # 오른쪽 벽
         
-    # 아랫쪽 중앙에 문(0: 통과) 뚫기
+    # 👇 [수정] 아랫쪽 정중앙에 딱 2칸만 문(0: 통과) 뚫기
     mid = default_cols // 2
-    for i in range(mid - 2, mid + 3):
-        map_data[default_rows-1][i] = 0
+    map_data[default_rows-1][mid-1] = 0
+    map_data[default_rows-1][mid] = 0
         
     return map_data
 
-# Tiled 맵 불러오기 (25x15 크기로 로드)
-NAYE_HOME_MAP = load_tiled_map("./code/기말/assets/map/naye_home.csv", 25, 15)
+# Tiled 맵 불러오기 (26x15 크기로 로드)
+NAYE_HOME_MAP = load_tiled_map("./code/기말/assets/map/naye_home.csv", 26, 15)
 
 # ==================== 이미지 자원 관리 ====================
 IMAGES = {}
@@ -357,10 +357,10 @@ class Player:
             move_x = direction.x * self.speed * dt
             move_y = direction.y * self.speed * dt
 
-        # 👇 [수정] 0: 통과, 1: 막힘 만 남겨서 심플해진 충돌 판정!
+        # [타일맵 충돌 검사]
         can_move_x, can_move_y = True, True
         if current_map_idx == -1 and tile_map:
-            passable_tiles = [0] # 0인 타일만 지나갈 수 있음
+            passable_tiles = [0] 
 
             check_x = self.pos.x + move_x + (self.radius if move_x > 0 else -self.radius)
             c_x = int(check_x // TILE_SIZE)
@@ -547,8 +547,7 @@ def main():
     app_state = APP_MAIN_MENU 
     current_map_idx = -1 
     cleared_rooms = [False] * len(MAP_DATA)
-    # 👇 [수정] 25x15 크기로 맵 넓이 설정
-    cols, rows = 25, 15
+    cols, rows = 26, 15
     room_w, room_h = cols * TILE_SIZE, rows * TILE_SIZE
     
     player = Player(room_w, room_h)
@@ -637,7 +636,7 @@ def main():
                             if btn_return_main.is_clicked(event, scaled_mouse_pos):
                                 app_state = APP_MAIN_MENU; current_overlay = None
                                 current_map_idx = -1 
-                                cols, rows = 25, 15 # 👈 메뉴로 나갈 때도 25x15로 초기화
+                                cols, rows = 26, 15 
                                 room_w, room_h = cols * TILE_SIZE, rows * TILE_SIZE
                                 player = Player(room_w, room_h)
                                 bullets.clear(); enemies.clear(); room_state = ROOM_WAITING; current_play_time = 0.0
@@ -695,7 +694,7 @@ def main():
                                     cleared_rooms = sd.get("cleared_rooms", [False] * len(MAP_DATA))
                                     
                                     if current_map_idx == -1:
-                                        cols, rows = 25, 15 # 👈 로드할 때도 25x15
+                                        cols, rows = 26, 15 
                                     else:
                                         cols, rows = MAP_DATA[current_map_idx]['cols'], MAP_DATA[current_map_idx]['rows']
                                         
@@ -717,7 +716,7 @@ def main():
                 if menu_btn_start.is_clicked(event, scaled_mouse_pos):
                     current_map_idx = -1
                     cleared_rooms = [False] * len(MAP_DATA)
-                    cols, rows = 25, 15 # 👈 새로 시작할 때도 25x15
+                    cols, rows = 26, 15 
                     room_w, room_h = cols * TILE_SIZE, rows * TILE_SIZE
                     player = Player(room_w, room_h)
                     
@@ -812,7 +811,8 @@ def main():
             elif room_state in [ROOM_WAITING, ROOM_CLEARED]:
                 for bullet in bullets[:]: bullet.update(dt)
                 
-                if room_w//2 - 90 < player.pos.x < room_w//2 + 90:
+                # 👇 [수정] 방 이동 판정 범위: 정중앙 타일 2개(64px)에 맞춰서 설정
+                if room_w//2 - TILE_SIZE < player.pos.x < room_w//2 + TILE_SIZE:
                     
                     if player.pos.y < 40 and current_map_idx >= 0 and current_map_idx < len(MAP_DATA) - 1:
                         current_map_idx += 1
@@ -863,10 +863,15 @@ def main():
                     pygame.draw.line(view_surface, GRID_COLOR, (-camera_x, y_pos), (room_w - camera_x, y_pos), 1)
 
                 door_color = DOOR_OPEN_COLOR if room_state in [ROOM_WAITING, ROOM_CLEARED] else DOOR_LOCKED_COLOR
+                
+                # 👇 [수정] 눈에 보이는 문의 넓이도 정중앙 2칸(64px)에 완벽하게 일치시킴
+                door_w = TILE_SIZE * 2
+                door_half_w = door_w // 2
+                
                 if current_map_idx < len(MAP_DATA) - 1:
-                    pygame.draw.rect(view_surface, door_color, (room_w//2 - 90 - camera_x, -camera_y, 180, 30))
+                    pygame.draw.rect(view_surface, door_color, (room_w//2 - door_half_w - camera_x, -camera_y, door_w, 30))
                 if current_map_idx > 0:
-                    pygame.draw.rect(view_surface, door_color, (room_w//2 - 90 - camera_x, room_h - 30 - camera_y, 180, 30))
+                    pygame.draw.rect(view_surface, door_color, (room_w//2 - door_half_w - camera_x, room_h - 30 - camera_y, door_w, 30))
                     
             else:
                 start_col = max(0, int(camera_x // TILE_SIZE))
@@ -880,7 +885,6 @@ def main():
                         x = col_idx * TILE_SIZE - camera_x
                         y = row_idx * TILE_SIZE - camera_y
                         
-                        # 👇 [수정] 1(막힘) 일 때만 회색 벽을 그립니다. 0(통과)은 그리지 않음.
                         if tile_val == 1: 
                             pygame.draw.rect(view_surface, (80, 80, 90), (x, y, TILE_SIZE, TILE_SIZE))
 
