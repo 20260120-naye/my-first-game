@@ -58,8 +58,8 @@ APP_MAIN_MENU = 0; APP_PLAYING = 1
 TILE_SIZE = 32 
 
 MAP_DATA = [
-    {"name": "교실", "cols": 40, "rows": 30},
-    {"name": "화장실", "cols": 26, "rows": 15}, 
+    {"name": "교실", "cols": 40, "rows": 28},
+    {"name": "화장실", "cols": 26, "rows": 18}, 
     {"name": "보건실", "cols": 20, "rows": 30},
     {"name": "체육관", "cols": 60, "rows": 60},
     {"name": "급식실", "cols": 50, "rows": 60},
@@ -129,14 +129,13 @@ def load_images():
         IMAGES['naye_base'] = pygame.transform.scale(naye_base, (1700, 900))
     except: pass
 
-    # 👇 마우스 커서 로드 부분 (실패 시 원인을 알려주도록 강화했습니다!)
     try:
         cursor_norm = pygame.image.load("./code/기말/assets/image/마우스_기본.png").convert_alpha()
-        IMAGES['cursor_normal'] = pygame.transform.scale(cursor_norm, (28, 28))
+        IMAGES['cursor_normal'] = pygame.transform.scale(cursor_norm, (32, 32))
         cursor_clk = pygame.image.load("./code/기말/assets/image/마우스_클릭.png").convert_alpha()
-        IMAGES['cursor_click'] = pygame.transform.scale(cursor_clk, (28, 28))
+        IMAGES['cursor_click'] = pygame.transform.scale(cursor_clk, (32, 32))
     except Exception as e:
-        print(f"[경고] 커서 이미지를 찾을 수 없습니다. 경로를 확인해주세요! ({e})")
+        print(f"[경고] 마우스 이미지를 찾을 수 없습니다: {e}")
 
     try:
         idle_1 = pygame.transform.scale(pygame.image.load("./code/기말/assets/image/대기 모션_1.png").convert_alpha(), (65, 65))
@@ -585,7 +584,6 @@ def main():
     small_font = get_korean_font(20)
     mini_font = get_korean_font(16)
     
-    # 미니맵 좌표 (소용돌이 형태)
     minimap_positions = [
         (0, 0), (1, 0), (2, 0), 
         (2, 1), (2, 2), 
@@ -862,14 +860,12 @@ def main():
             if room_h >= VIEW_H: camera_y = max(0, min(player.pos.y - VIEW_H / 2, room_h - VIEW_H))
             else: camera_y = -(VIEW_H - room_h) // 2
 
-            # 👇 [핵심 추가] 몬스터가 다음 맵으로 넘어가는 문 바로 앞에서 스폰되도록 수정했습니다!
             if room_state == ROOM_WAITING:
                 if current_map_idx == -1:
                     room_state = ROOM_CLEARED
                 elif not cleared_rooms[current_map_idx]: 
                     room_state = ROOM_COMBAT
                     if current_map_idx == len(MAP_DATA) - 1:
-                        # 보스방은 예외로 정중앙 스폰
                         enemies.append(Enemy(room_w // 2, room_h // 2, is_boss=True))
                     else:
                         pos_curr = minimap_positions[current_map_idx]
@@ -880,21 +876,19 @@ def main():
                         door_x, door_y = room_w // 2, room_h // 2
                         off_x, off_y = 0, 0
                         
-                        # 나선형 맵 구조에 따라 다음 문의 위치를 계산합니다.
-                        if dy == -1: # 다음 문이 위에 있을 때
+                        if dy == -1: 
                             door_x, door_y = room_w // 2, 80
-                            off_x, off_y = 0, 120 # 문 살짝 아래에 스폰
-                        elif dy == 1: # 다음 문이 아래에 있을 때
+                            off_x, off_y = 0, 120 
+                        elif dy == 1: 
                             door_x, door_y = room_w // 2, room_h - 80
-                            off_x, off_y = 0, -120 # 문 살짝 위에 스폰
-                        elif dx == -1: # 다음 문이 왼쪽에 있을 때
+                            off_x, off_y = 0, -120 
+                        elif dx == -1: 
                             door_x, door_y = 80, room_h // 2
-                            off_x, off_y = 120, 0 # 문 살짝 오른쪽에 스폰
-                        elif dx == 1: # 다음 문이 오른쪽에 있을 때
+                            off_x, off_y = 120, 0 
+                        elif dx == 1: 
                             door_x, door_y = room_w - 80, room_h // 2
-                            off_x, off_y = -120, 0 # 문 살짝 왼쪽에 스폰
+                            off_x, off_y = -120, 0 
                             
-                        # 계산된 문 앞 위치에 3마리가 살짝 퍼져서 스폰됩니다.
                         enemies.append(Enemy(door_x + off_x, door_y + off_y))
                         if off_x == 0:
                             enemies.append(Enemy(door_x - 80, door_y + off_y + (40 if off_y > 0 else -40)))
@@ -925,9 +919,9 @@ def main():
                 
                 transitioned = False
                 
-                # 👇 [핵심 복구] 나예 집(-1) ➡️ 교실(0) 이동 로직 완벽 복구
+                # 1. 나예 집(-1) ➡️ 교실(0) 이동 로직 (일방통행, 한 번 나오면 끝!)
                 if current_map_idx == -1:
-                    # 현관문(아래쪽)으로 넓게 비비면 교실로 이동합니다!
+                    # 현관문(아래쪽)으로 나갑니다. 문 판정 박스를 대폭 늘렸습니다 (비비면 바로 나감!)
                     if (room_w//2 - 100 < player.pos.x < room_w//2 + 100) and player.pos.y > room_h - 45:
                         current_map_idx = 0
                         cols, rows = MAP_DATA[0]['cols'], MAP_DATA[0]['rows']
@@ -937,11 +931,21 @@ def main():
                         player.pos.x, player.pos.y = 90, room_h // 2
                         transitioned = True
 
-                # 학교 내부 나선형 맵 이동 로직 (교실 0 ~ 교장실 7)
+                # 2. 학교 내부 나선형 맵 이동 로직 (교실 0 ~ 교장실 7) - 앞뒤로 자유롭게 이동 가능!
                 if not transitioned and current_map_idx >= 0:
                     pos_curr = minimap_positions[current_map_idx]
                     doors = []
                     
+                    # 👇 [핵심 복구] 이전 방으로 돌아가는 문을 추가하는 로직입니다. (0번 방은 전으로 못 감)
+                    if current_map_idx > 0:
+                        pos_prev = minimap_positions[current_map_idx - 1]
+                        dx, dy = pos_prev[0] - pos_curr[0], pos_prev[1] - pos_curr[1]
+                        if dx == 1: doors.append({'dir': 'RIGHT', 'target': current_map_idx - 1})
+                        elif dx == -1: doors.append({'dir': 'LEFT', 'target': current_map_idx - 1})
+                        elif dy == 1: doors.append({'dir': 'BOTTOM', 'target': current_map_idx - 1})
+                        elif dy == -1: doors.append({'dir': 'TOP', 'target': current_map_idx - 1})
+                        
+                    # 다음 방으로 가는 문
                     if current_map_idx < len(MAP_DATA) - 1:
                         pos_next = minimap_positions[current_map_idx + 1]
                         dx, dy = pos_next[0] - pos_curr[0], pos_next[1] - pos_curr[1]
@@ -956,7 +960,7 @@ def main():
                         trig = False
                         sp_dir = ''
                         
-                        # 각 벽면에 부딪히면 다음 방으로 넘어갑니다. (히트박스를 넓혀 문 통과를 매우 쉽게 만듦!)
+                        # 문 통과 판정을 엄청 후하게 주었습니다! 근처에 가기만 해도 넘어갑니다.
                         if d_dir == 'TOP' and player.pos.y < 45 and (room_w//2 - 100 < player.pos.x < room_w//2 + 100):
                             trig, sp_dir = True, 'BOTTOM'
                         elif d_dir == 'BOTTOM' and player.pos.y > room_h - 45 and (room_w//2 - 100 < player.pos.x < room_w//2 + 100):
@@ -1015,9 +1019,18 @@ def main():
                 door_w = TILE_SIZE * 2
                 door_half_w = door_w // 2
                 
-                # 교실에서는 더 이상 나예 집으로 돌아가는 왼쪽 문을 그리지 않습니다! (일방통행)
                 doors_to_draw = []
                 pos_curr = minimap_positions[current_map_idx]
+                
+                # 👇 [핵심 복구] 이전 방으로 돌아가는 문을 그려줍니다. (단, 0번 교실은 이전 방인 집으로 가는 문을 그리지 않습니다)
+                if current_map_idx > 0:
+                    pos_prev = minimap_positions[current_map_idx - 1]
+                    dx, dy = pos_prev[0] - pos_curr[0], pos_prev[1] - pos_curr[1]
+                    if dx == 1: doors_to_draw.append('RIGHT')
+                    elif dx == -1: doors_to_draw.append('LEFT')
+                    elif dy == 1: doors_to_draw.append('BOTTOM')
+                    elif dy == -1: doors_to_draw.append('TOP')
+                    
                 if current_map_idx < len(MAP_DATA) - 1:
                     pos_next = minimap_positions[current_map_idx + 1]
                     dx, dy = pos_next[0] - pos_curr[0], pos_next[1] - pos_curr[1]
@@ -1277,7 +1290,6 @@ def main():
                             if saves_data[f"slot_{i+1}"]: delete_buttons[i].draw(display_surface, center_x, scaled_mouse_pos)
                         btn_close_overlay.draw(display_surface, center_x, scaled_mouse_pos)
 
-        # 👇 [핵심 점검] 준비하신 커서 이미지가 성공적으로 불러와지면 화면 맨 마지막에 무조건 그립니다!
         if 'cursor_normal' in IMAGES and 'cursor_click' in IMAGES:
             pygame.mouse.set_visible(False)
             current_cursor = IMAGES['cursor_click'] if is_mouse_down else IMAGES['cursor_normal']
