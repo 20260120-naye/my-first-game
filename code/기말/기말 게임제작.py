@@ -283,6 +283,50 @@ class Button:
     def is_clicked(self, event, scaled_mouse_pos):
         return event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.rect.collidepoint(scaled_mouse_pos)
 
+# ==================== 이펙트 클래스 ====================
+
+class Particle:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+        
+        angle = random.uniform(0, 2 * math.pi)
+        speed = random.uniform(100, 250) 
+        self.vx = math.cos(angle) * speed
+        self.vy = math.sin(angle) * speed
+        
+        self.max_lifetime = random.uniform(0.2, 0.4)
+        self.lifetime = self.max_lifetime
+        
+        self.size = random.randint(4, 9)
+        self.color = random.choice([(255, 40, 40), (200, 10, 10), (130, 0, 0), (80, 0, 0)])
+
+    def update(self, dt):
+        self.x += self.vx * dt
+        self.y += self.vy * dt
+        
+        self.vy += 1000 * dt 
+        
+        friction_y = 0.95 ** (dt * 60)
+        friction_x = 0.98 ** (dt * 60)
+        self.vy *= friction_y
+        self.vx *= friction_x
+        
+        self.lifetime -= dt
+
+    def draw(self, surface, cam_x, cam_y):
+        if self.lifetime > 0:
+            ratio = self.lifetime / self.max_lifetime
+            current_size = max(1, int(self.size * ratio))
+            
+            draw_x = int(self.x - cam_x)
+            draw_y = int(self.y - cam_y)
+            
+            rect = pygame.Rect(0, 0, current_size, current_size)
+            rect.center = (draw_x, draw_y)
+            pygame.draw.rect(surface, self.color, rect)
+
+
 class DamageText:
     def __init__(self, x, y, amount):
         self.pos = pygame.math.Vector2(x, y)
@@ -324,7 +368,6 @@ class DamageText:
         temp_surf.set_alpha(alpha)
         surface.blit(temp_surf, (draw_x - 2, draw_y - 2))
 
-# 👇 너무 진하다는 의견을 반영해 이펙트를 한 번만 부드럽게 그리도록 수정했습니다.
 class SlashEffect:
     def __init__(self, x, y):
         self.pos = pygame.math.Vector2(x, y)
@@ -348,7 +391,6 @@ class SlashEffect:
         img = self.image.copy()
         img = pygame.transform.rotate(img, self.angle)
         
-        # 처음부터 끝까지 부드럽고 자연스럽게 페이드아웃 됩니다.
         alpha = min(255, int((self.timer / self.max_timer) * 255))
         img.set_alpha(alpha)
             
@@ -356,7 +398,6 @@ class SlashEffect:
         draw_y = int(self.pos.y - cam_y)
         rect = img.get_rect(center=(draw_x, draw_y))
         
-        # 자연스러움을 위해 겹쳐 그리지 않고 딱 한 번만 렌더링합니다!
         surface.blit(img, rect)
 
 # ==================== 게임 객체 ====================
@@ -687,6 +728,7 @@ def main():
     
     damage_texts = []
     slash_effects = []
+    particles = []
     
     is_mouse_down = False
     popup_msg = ""
@@ -822,7 +864,7 @@ def main():
                                 player = Player(room_w, room_h)
                                 bullets.clear(); enemies.clear(); room_state = ROOM_WAITING; current_play_time = 0.0
                                 cleared_rooms = [False] * len(MAP_DATA) 
-                                damage_texts.clear(); slash_effects.clear()
+                                damage_texts.clear(); slash_effects.clear(); particles.clear()
 
                         if current_tab == "VIDEO":
                             if btn_window.is_clicked(event, scaled_mouse_pos): update_display('WINDOW')
@@ -905,7 +947,7 @@ def main():
                                         en.hp = e["hp"]
                                         enemies.append(en)
                                         
-                                    bullets.clear(); damage_texts.clear(); slash_effects.clear(); app_state = APP_PLAYING; current_overlay = None; break
+                                    bullets.clear(); damage_texts.clear(); slash_effects.clear(); particles.clear(); app_state = APP_PLAYING; current_overlay = None; break
 
             elif app_state == APP_MAIN_MENU:
                 if menu_btn_start.is_clicked(event, scaled_mouse_pos):
@@ -920,7 +962,7 @@ def main():
                     
                     NAYE_HOME_MAP = load_tiled_map(layer_files, 26, 15)
                     
-                    bullets.clear(); enemies.clear(); damage_texts.clear(); slash_effects.clear()
+                    bullets.clear(); enemies.clear(); damage_texts.clear(); slash_effects.clear(); particles.clear()
                     room_state = ROOM_CLEARED
                     current_play_time = 0.0
                     app_state = APP_PLAYING
@@ -962,6 +1004,9 @@ def main():
                                     damage_texts.append(DamageText(enemy.pos.x, enemy.pos.y - 20, individual_dmg))
                                     slash_effects.append(SlashEffect(enemy.pos.x, enemy.pos.y))
                                     
+                                    for _ in range(random.randint(15, 25)):
+                                        particles.append(Particle(enemy.pos.x, enemy.pos.y - 10))
+                                    
                                     if enemy.hp <= 0:
                                         enemies.remove(enemy)
 
@@ -987,6 +1032,9 @@ def main():
                                     
                                     damage_texts.append(DamageText(avg_x, min_y, sandbag_dmg))
                                     slash_effects.append(SlashEffect(avg_x, min_y + TILE_SIZE//2))
+                                    
+                                    for _ in range(random.randint(15, 25)):
+                                        particles.append(Particle(avg_x, min_y + TILE_SIZE//2))
 
         # ==================== 게임 로직 처리 ====================
         if not current_overlay and app_state == APP_PLAYING:
@@ -1006,6 +1054,11 @@ def main():
                 s_eff.update(dt)
                 if s_eff.timer <= 0:
                     slash_effects.remove(s_eff)
+                    
+            for p in particles[:]:
+                p.update(dt)
+                if p.lifetime <= 0:
+                    particles.remove(p)
 
             if room_w >= VIEW_W: camera_x = max(0, min(player.pos.x - VIEW_W / 2, room_w - VIEW_W))
             else: camera_x = -(VIEW_W - room_w) // 2
@@ -1063,6 +1116,9 @@ def main():
                             damage_texts.append(DamageText(enemy.pos.x, enemy.pos.y - 20, 1))
                             slash_effects.append(SlashEffect(enemy.pos.x, enemy.pos.y))
                             
+                            for _ in range(random.randint(10, 15)):
+                                particles.append(Particle(enemy.pos.x, enemy.pos.y - 10))
+                                
                             if bullet in bullets: bullets.remove(bullet)
                             if enemy.hp <= 0: enemies.remove(enemy)
                             break
@@ -1078,12 +1134,17 @@ def main():
                 
                 if current_map_idx == -1:
                     if (room_w//2 - 100 < player.pos.x < room_w//2 + 100) and player.pos.y > room_h - 45:
-                        current_map_idx = 0
-                        cols, rows = MAP_DATA[0]['cols'], MAP_DATA[0]['rows']
-                        room_w, room_h = cols * TILE_SIZE, rows * TILE_SIZE
-                        
-                        player.pos.x, player.pos.y = 90, room_h // 2
-                        transitioned = True
+                        if player.has_bag:
+                            current_map_idx = 0
+                            cols, rows = MAP_DATA[0]['cols'], MAP_DATA[0]['rows']
+                            room_w, room_h = cols * TILE_SIZE, rows * TILE_SIZE
+                            
+                            player.pos.x, player.pos.y = 90, room_h // 2
+                            transitioned = True
+                        else:
+                            popup_msg = "가방을 깜빡했어!"
+                            popup_timer = 2.0
+                            player.pos.y = room_h - 60
 
                 if not transitioned and current_map_idx >= 0:
                     pos_curr = minimap_positions[current_map_idx]
@@ -1142,6 +1203,7 @@ def main():
                     enemies.clear()
                     damage_texts.clear()
                     slash_effects.clear() 
+                    particles.clear()
 
         # ==================== 렌더링 (그리기) ====================
         display_surface.fill((0, 0, 0)) 
@@ -1238,6 +1300,10 @@ def main():
             for bullet in bullets: bullet.draw(view_surface, camera_x, camera_y)
             
             player.draw(view_surface, camera_x, camera_y)
+            
+            for p in particles:
+                p.draw(view_surface, camera_x, camera_y)
+                
             for s_eff in slash_effects:
                 s_eff.draw(view_surface, camera_x, camera_y)
                 
@@ -1275,9 +1341,10 @@ def main():
             
             if popup_timer > 0:
                 popup_timer -= dt
-                popup_surf = mini_font.render(popup_msg, True, (150, 255, 150))
+                popup_surf = mini_font.render(popup_msg, True, (255, 200, 200))
                 draw_px = int(player.pos.x - camera_x) + VIEW_MARGIN_X
-                draw_py = int(player.pos.y - camera_y) + VIEW_MARGIN_Y - 105 
+                # 👇 캐릭터 머리와 더 가깝게 Y축 오프셋을 -105에서 -55로 수정했습니다!
+                draw_py = int(player.pos.y - camera_y) + VIEW_MARGIN_Y - 55 
                 
                 bg_rect = popup_surf.get_rect(center=(draw_px, draw_py))
                 bg_rect.inflate_ip(12, 8)
