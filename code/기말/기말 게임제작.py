@@ -123,6 +123,12 @@ IMAGES = {}
 
 def load_images():
     try:
+        title_bg_img = pygame.image.load("./code/기말/assets/image/시작배경.png").convert()
+        IMAGES['title_bg'] = pygame.transform.scale(title_bg_img, (LOGICAL_WIDTH, LOGICAL_HEIGHT))
+    except Exception as e:
+        print(f"[경고] 타이틀 배경(시작배경.png) 이미지를 찾을 수 없습니다: {e}")
+
+    try:
         bg_img = pygame.image.load("./code/기말/assets/naye_home/나예집_배경.png").convert_alpha()
         IMAGES['naye_home_bg'] = pygame.transform.scale(bg_img, (26 * TILE_SIZE, 15 * TILE_SIZE))
     except: pass
@@ -640,10 +646,12 @@ def main():
     current_overlay = None; current_tab = "VIDEO"; waiting_for_key = None
     confirm_delete_slot = None; confirm_save_slot = None
 
-    menu_btn_start = Button(-710, 660, 240, 70, "새로 시작")
-    menu_btn_continue = Button(-710, 740, 240, 70, "이어하기")
-    menu_btn_settings = Button(-710, 820, 240, 70, "설정")
-    menu_btn_quit = Button(-710, 900, 240, 70, "게임 종료", base_col=(180, 50, 50), hover_col=(220, 80, 80))
+    # 👇 [핵심 변경] 버튼의 x 좌표(rel_x)와 y 좌표를 변경하여 왼쪽 아래 텅 빈 공간에 밀착시켰습니다.
+    # LOGICAL_WIDTH(1920) 기준 중앙에서 왼쪽으로 750 이동 = 왼쪽 여백 약 100px 정도에 정렬됩니다.
+    menu_btn_start = Button(-840, 700, 200, 60, "새로 시작")
+    menu_btn_continue = Button(-840, 780, 200, 60, "이어하기")
+    menu_btn_settings = Button(-840, 860, 200, 60, "설정")
+    menu_btn_quit = Button(-840, 940, 200, 60, "게임 종료", base_col=(180, 50, 50), hover_col=(220, 80, 80))
 
     btn_video = Button(-200, 200, 180, 60, "화면 설정")
     btn_audio = Button(0, 200, 180, 60, "음향 설정")
@@ -885,11 +893,9 @@ def main():
                             hitbox_pos = pygame.math.Vector2(hx, hy)
                             hitbox_radius = 90 
                             
-                            # 👇 [핵심 변경] 타격 판정을 확인하는 for문 안쪽에서 몬스터마다 개별적으로 랜덤 데미지를 굴립니다!
                             for enemy in enemies[:]:
                                 if hitbox_pos.distance_to(enemy.pos) < hitbox_radius + enemy.radius:
                                     
-                                    # 이 몬스터만을 위한 새로운 랜덤 데미지 계산!
                                     individual_dmg = random.randint(20, 25) if player.attack_step == 2 else random.randint(15, 19)
                                     
                                     enemy.hp -= individual_dmg
@@ -915,7 +921,6 @@ def main():
                                 if hit_4_tiles:
                                     avg_x = sum(t[0] for t in hit_4_tiles) / len(hit_4_tiles)
                                     min_y = min(t[1] for t in hit_4_tiles) - TILE_SIZE / 2
-                                    # 샌드백용 통합 데미지도 새로 한 번 더 굴려줍니다.
                                     sandbag_dmg = random.randint(20, 25) if player.attack_step == 2 else random.randint(15, 19)
                                     damage_texts.append(DamageText(avg_x, min_y, sandbag_dmg))
 
@@ -1069,8 +1074,12 @@ def main():
         display_surface.fill((0, 0, 0)) 
 
         if app_state == APP_MAIN_MENU:
-            display_surface.blit(title_font.render("단죄의 시간", True, (255, 255, 255)), (150, 150))
-            display_surface.blit(font.render("Time of Condemnation", True, (150, 150, 150)), (160, 280))
+            if 'title_bg' in IMAGES:
+                display_surface.blit(IMAGES['title_bg'], (0, 0))
+            else:
+                display_surface.blit(title_font.render("단죄의 시간", True, (255, 255, 255)), (150, 150))
+                display_surface.blit(font.render("Time of Condemnation", True, (150, 150, 150)), (160, 280))
+            
             menu_btn_start.draw(display_surface, center_x, scaled_mouse_pos)
             menu_btn_continue.draw(display_surface, center_x, scaled_mouse_pos)
             menu_btn_settings.draw(display_surface, center_x, scaled_mouse_pos)
