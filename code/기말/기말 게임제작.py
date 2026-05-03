@@ -4,6 +4,7 @@ import sys
 import json
 import csv  # Tiled CSV 파일을 읽기 위한 모듈
 import math 
+import random 
 
 # Pygame 초기화
 pygame.init()
@@ -58,8 +59,8 @@ APP_MAIN_MENU = 0; APP_PLAYING = 1
 TILE_SIZE = 32 
 
 MAP_DATA = [
-    {"name": "교실", "cols": 40, "rows": 28},
-    {"name": "화장실", "cols": 26, "rows": 18}, 
+    {"name": "교실", "cols": 40, "rows": 30},
+    {"name": "화장실", "cols": 26, "rows": 15}, 
     {"name": "보건실", "cols": 20, "rows": 30},
     {"name": "체육관", "cols": 60, "rows": 60},
     {"name": "급식실", "cols": 50, "rows": 60},
@@ -94,6 +95,8 @@ def load_tiled_map(filepaths, default_cols=26, default_rows=15):
                                 combined_map[row_idx][col_idx] = 2
                             elif real_val == 3:
                                 combined_map[row_idx][col_idx] = 3
+                            elif real_val == 4:
+                                combined_map[row_idx][col_idx] = 4
                             elif real_val != -1 and real_val != 0: 
                                 combined_map[row_idx][col_idx] = 1
             except Exception as e:
@@ -256,6 +259,48 @@ class Button:
 
     def is_clicked(self, event, scaled_mouse_pos):
         return event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.rect.collidepoint(scaled_mouse_pos)
+
+# 데미지 텍스트 클래스
+class DamageText:
+    def __init__(self, x, y, amount):
+        self.pos = pygame.math.Vector2(x, y)
+        self.amount = amount
+        self.timer = 0.8  
+        self.max_timer = 0.8
+        
+        angle = random.uniform(-math.pi/4, math.pi/4) 
+        speed = random.uniform(180, 260)              
+        self.vel = pygame.math.Vector2(math.sin(angle) * speed, -math.cos(angle) * speed)
+        
+        self.font = get_korean_font(36, bold=True)
+        self.inner_color = (255, 70, 70)  
+        self.outline_color = (120, 0, 0)  
+        
+        self.text_surf_inner = self.font.render(str(self.amount), True, self.inner_color)
+        self.text_surf_out = self.font.render(str(self.amount), True, self.outline_color)
+        
+    def update(self, dt):
+        self.pos += self.vel * dt
+        self.vel.y += 700 * dt 
+        self.timer -= dt
+        
+    def draw(self, surface, cam_x, cam_y):
+        if self.timer <= 0: return
+        
+        alpha = min(255, int((self.timer / self.max_timer) * 255 * 1.5)) 
+        
+        draw_x = int(self.pos.x - cam_x - self.text_surf_inner.get_width()//2)
+        draw_y = int(self.pos.y - cam_y - self.text_surf_inner.get_height()//2)
+        
+        temp_surf = pygame.Surface((self.text_surf_inner.get_width() + 4, self.text_surf_inner.get_height() + 4), pygame.SRCALPHA)
+        
+        offsets = [(-2,0), (2,0), (0,-2), (0,2), (-1,-1), (1,-1), (-1,1), (1,1)]
+        for dx, dy in offsets:
+            temp_surf.blit(self.text_surf_out, (dx + 2, dy + 2))
+        
+        temp_surf.blit(self.text_surf_inner, (2, 2))
+        temp_surf.set_alpha(alpha)
+        surface.blit(temp_surf, (draw_x - 2, draw_y - 2))
 
 # ==================== 게임 객체 ====================
 class Player:
@@ -515,10 +560,10 @@ class Enemy:
         self.pos = pygame.math.Vector2(x, y)
         self.is_boss = is_boss
         if is_boss:
-            self.speed, self.radius, self.hp, self.max_hp = 120, 30, 50, 50 
+            self.speed, self.radius, self.hp, self.max_hp = 120, 30, 500, 500 
             self.color = BOSS_COLOR
         else:
-            self.speed, self.radius, self.hp, self.max_hp = 200, 14, 5, 5 
+            self.speed, self.radius, self.hp, self.max_hp = 200, 14, 100, 100 
             self.color = ENEMY_COLOR
     def update(self, dt, target_pos):
         direction = target_pos - self.pos
@@ -573,8 +618,9 @@ def main():
     saves_data = get_save_data(); current_play_time = 0.0
     camera_x, camera_y = 0, 0
     
-    is_mouse_down = False
+    damage_texts = []
     
+    is_mouse_down = False
     popup_msg = ""
     popup_timer = 0.0
     
@@ -708,6 +754,7 @@ def main():
                                 player = Player(room_w, room_h)
                                 bullets.clear(); enemies.clear(); room_state = ROOM_WAITING; current_play_time = 0.0
                                 cleared_rooms = [False] * len(MAP_DATA) 
+                                damage_texts.clear()
 
                         if current_tab == "VIDEO":
                             if btn_window.is_clicked(event, scaled_mouse_pos): update_display('WINDOW')
@@ -790,7 +837,7 @@ def main():
                                         en.hp = e["hp"]
                                         enemies.append(en)
                                         
-                                    bullets.clear(); app_state = APP_PLAYING; current_overlay = None; break
+                                    bullets.clear(); damage_texts.clear(); app_state = APP_PLAYING; current_overlay = None; break
 
             elif app_state == APP_MAIN_MENU:
                 if menu_btn_start.is_clicked(event, scaled_mouse_pos):
@@ -805,7 +852,7 @@ def main():
                     
                     NAYE_HOME_MAP = load_tiled_map(layer_files, 26, 15)
                     
-                    bullets.clear(); enemies.clear()
+                    bullets.clear(); enemies.clear(); damage_texts.clear()
                     room_state = ROOM_CLEARED
                     current_play_time = 0.0
                     app_state = APP_PLAYING
@@ -838,12 +885,39 @@ def main():
                             hitbox_pos = pygame.math.Vector2(hx, hy)
                             hitbox_radius = 90 
                             
+                            # 👇 [핵심 변경] 타격 판정을 확인하는 for문 안쪽에서 몬스터마다 개별적으로 랜덤 데미지를 굴립니다!
                             for enemy in enemies[:]:
                                 if hitbox_pos.distance_to(enemy.pos) < hitbox_radius + enemy.radius:
-                                    dmg = 2 if player.attack_step == 2 else 1
-                                    enemy.hp -= dmg
+                                    
+                                    # 이 몬스터만을 위한 새로운 랜덤 데미지 계산!
+                                    individual_dmg = random.randint(20, 25) if player.attack_step == 2 else random.randint(15, 19)
+                                    
+                                    enemy.hp -= individual_dmg
+                                    damage_texts.append(DamageText(enemy.pos.x, enemy.pos.y - 20, individual_dmg))
                                     if enemy.hp <= 0:
                                         enemies.remove(enemy)
+
+                            if current_map_idx == -1: 
+                                hit_4_tiles = []
+                                start_c = max(0, int((hitbox_pos.x - hitbox_radius) // TILE_SIZE))
+                                end_c = min(len(NAYE_HOME_MAP[0]), int((hitbox_pos.x + hitbox_radius) // TILE_SIZE) + 1)
+                                start_r = max(0, int((hitbox_pos.y - hitbox_radius) // TILE_SIZE))
+                                end_r = min(len(NAYE_HOME_MAP), int((hitbox_pos.y + hitbox_radius) // TILE_SIZE) + 1)
+                                
+                                for r in range(start_r, end_r):
+                                    for c in range(start_c, end_c):
+                                        if NAYE_HOME_MAP[r][c] == 4:
+                                            tc_x = c * TILE_SIZE + TILE_SIZE / 2
+                                            tc_y = r * TILE_SIZE + TILE_SIZE / 2
+                                            if hitbox_pos.distance_to(pygame.math.Vector2(tc_x, tc_y)) < hitbox_radius + TILE_SIZE / 2:
+                                                hit_4_tiles.append((tc_x, tc_y))
+                                
+                                if hit_4_tiles:
+                                    avg_x = sum(t[0] for t in hit_4_tiles) / len(hit_4_tiles)
+                                    min_y = min(t[1] for t in hit_4_tiles) - TILE_SIZE / 2
+                                    # 샌드백용 통합 데미지도 새로 한 번 더 굴려줍니다.
+                                    sandbag_dmg = random.randint(20, 25) if player.attack_step == 2 else random.randint(15, 19)
+                                    damage_texts.append(DamageText(avg_x, min_y, sandbag_dmg))
 
         # ==================== 게임 로직 처리 ====================
         if not current_overlay and app_state == APP_PLAYING:
@@ -853,6 +927,11 @@ def main():
             
             player.move(dt, room_w, room_h, world_mouse_x, world_mouse_y, current_map_idx, NAYE_HOME_MAP)
             current_play_time += dt
+            
+            for d_txt in damage_texts[:]:
+                d_txt.update(dt)
+                if d_txt.timer <= 0:
+                    damage_texts.remove(d_txt)
 
             if room_w >= VIEW_W: camera_x = max(0, min(player.pos.x - VIEW_W / 2, room_w - VIEW_W))
             else: camera_x = -(VIEW_W - room_w) // 2
@@ -906,6 +985,7 @@ def main():
                     for enemy in enemies[:]:
                         if bullet.pos.distance_to(enemy.pos) < bullet.radius + enemy.radius:
                             enemy.hp -= 1
+                            damage_texts.append(DamageText(enemy.pos.x, enemy.pos.y - 20, 1))
                             if bullet in bullets: bullets.remove(bullet)
                             if enemy.hp <= 0: enemies.remove(enemy)
                             break
@@ -919,24 +999,19 @@ def main():
                 
                 transitioned = False
                 
-                # 1. 나예 집(-1) ➡️ 교실(0) 이동 로직 (일방통행, 한 번 나오면 끝!)
                 if current_map_idx == -1:
-                    # 현관문(아래쪽)으로 나갑니다. 문 판정 박스를 대폭 늘렸습니다 (비비면 바로 나감!)
                     if (room_w//2 - 100 < player.pos.x < room_w//2 + 100) and player.pos.y > room_h - 45:
                         current_map_idx = 0
                         cols, rows = MAP_DATA[0]['cols'], MAP_DATA[0]['rows']
                         room_w, room_h = cols * TILE_SIZE, rows * TILE_SIZE
                         
-                        # 교실 진입 시 왼쪽 문에서 시작합니다.
                         player.pos.x, player.pos.y = 90, room_h // 2
                         transitioned = True
 
-                # 2. 학교 내부 나선형 맵 이동 로직 (교실 0 ~ 교장실 7) - 앞뒤로 자유롭게 이동 가능!
                 if not transitioned and current_map_idx >= 0:
                     pos_curr = minimap_positions[current_map_idx]
                     doors = []
                     
-                    # 👇 [핵심 복구] 이전 방으로 돌아가는 문을 추가하는 로직입니다. (0번 방은 전으로 못 감)
                     if current_map_idx > 0:
                         pos_prev = minimap_positions[current_map_idx - 1]
                         dx, dy = pos_prev[0] - pos_curr[0], pos_prev[1] - pos_curr[1]
@@ -945,7 +1020,6 @@ def main():
                         elif dy == 1: doors.append({'dir': 'BOTTOM', 'target': current_map_idx - 1})
                         elif dy == -1: doors.append({'dir': 'TOP', 'target': current_map_idx - 1})
                         
-                    # 다음 방으로 가는 문
                     if current_map_idx < len(MAP_DATA) - 1:
                         pos_next = minimap_positions[current_map_idx + 1]
                         dx, dy = pos_next[0] - pos_curr[0], pos_next[1] - pos_curr[1]
@@ -960,7 +1034,6 @@ def main():
                         trig = False
                         sp_dir = ''
                         
-                        # 문 통과 판정을 엄청 후하게 주었습니다! 근처에 가기만 해도 넘어갑니다.
                         if d_dir == 'TOP' and player.pos.y < 45 and (room_w//2 - 100 < player.pos.x < room_w//2 + 100):
                             trig, sp_dir = True, 'BOTTOM'
                         elif d_dir == 'BOTTOM' and player.pos.y > room_h - 45 and (room_w//2 - 100 < player.pos.x < room_w//2 + 100):
@@ -983,7 +1056,6 @@ def main():
                             transitioned = True
                             break
                             
-                # 공통 화면 상태 업데이트
                 if transitioned:
                     if current_map_idx == -1:
                         room_state = ROOM_CLEARED
@@ -991,6 +1063,7 @@ def main():
                         room_state = ROOM_CLEARED if cleared_rooms[current_map_idx] else ROOM_WAITING
                     bullets.clear()
                     enemies.clear()
+                    damage_texts.clear()
 
         # ==================== 렌더링 (그리기) ====================
         display_surface.fill((0, 0, 0)) 
@@ -1022,7 +1095,6 @@ def main():
                 doors_to_draw = []
                 pos_curr = minimap_positions[current_map_idx]
                 
-                # 👇 [핵심 복구] 이전 방으로 돌아가는 문을 그려줍니다. (단, 0번 교실은 이전 방인 집으로 가는 문을 그리지 않습니다)
                 if current_map_idx > 0:
                     pos_prev = minimap_positions[current_map_idx - 1]
                     dx, dy = pos_prev[0] - pos_curr[0], pos_prev[1] - pos_curr[1]
@@ -1083,6 +1155,9 @@ def main():
                 for enemy in enemies: enemy.draw(view_surface, camera_x, camera_y)
             for bullet in bullets: bullet.draw(view_surface, camera_x, camera_y)
             player.draw(view_surface, camera_x, camera_y)
+
+            for d_txt in damage_texts:
+                d_txt.draw(view_surface, camera_x, camera_y)
 
             display_surface.blit(view_surface, (VIEW_MARGIN_X, VIEW_MARGIN_Y))
 
