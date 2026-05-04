@@ -59,7 +59,7 @@ APP_MAIN_MENU = 0; APP_STORY = 1; APP_PLAYING = 2
 
 TILE_SIZE = 32 
 
-# 👇 [수정됨] 교실(30x28) 및 컴퓨터실(40x28) 크기 반영
+# 교실(30x28) 및 컴퓨터실(40x28) 크기 반영
 MAP_DATA = [
     {"name": "교실", "cols": 30, "rows": 28},
     {"name": "화장실", "cols": 26, "rows": 15}, 
@@ -114,17 +114,14 @@ def load_tiled_map(filepaths, default_cols=26, default_rows=15):
 
     return combined_map
 
-# 나예 방 맵 로드
 layer_files_home = ["./code/기말/assets/naye_home/나예집_충돌.csv"]
 NAYE_HOME_MAP = load_tiled_map(layer_files_home, 26, 15)
 
-# 교실 맵 로드 (수정된 csv를 우선으로 읽고, 없으면 원본으로 시도)
 layer_files_class = [
     "./code/기말/assets/school_class/교실_충돌_수정.csv", 
     "./code/기말/assets/school_class/교실_충돌.csv"
 ]
 CLASSROOM_MAP = load_tiled_map(layer_files_class, MAP_DATA[0]['cols'], MAP_DATA[0]['rows'])
-
 
 # ==================== 이미지 자원 관리 ====================
 IMAGES = {}
@@ -140,8 +137,7 @@ def load_images():
         bg_img = pygame.image.load("./code/기말/assets/naye_home/나예집_배경.png").convert_alpha()
         IMAGES['naye_home_bg'] = pygame.transform.scale(bg_img, (26 * TILE_SIZE, 15 * TILE_SIZE))
     except: pass
-    
-    # 👇 교실 배경 이미지 로드 추가
+
     try:
         class_bg_img = pygame.image.load("./code/기말/assets/school_class/학교_교실.png").convert_alpha()
         IMAGES['class_bg'] = pygame.transform.scale(class_bg_img, (MAP_DATA[0]['cols'] * TILE_SIZE, MAP_DATA[0]['rows'] * TILE_SIZE))
@@ -666,7 +662,6 @@ class Player:
             move_y = direction.y * self.speed * dt
 
         can_move_x, can_move_y = True, True
-        # 👇 [수정됨] tile_map이 주어지면 어느 맵이든 충돌 처리를 수행하도록 범용화
         if tile_map:
             passable_tiles = [0] 
 
@@ -848,7 +843,7 @@ def update_display(mode):
     current_width, current_height = screen.get_width(), screen.get_height()
 
 def main():
-    global current_width, current_height, screen, NAYE_HOME_MAP
+    global current_width, current_height, screen, NAYE_HOME_MAP, CLASSROOM_MAP
     
     load_config()
     update_display(config['display_mode'])
@@ -986,9 +981,9 @@ def main():
                     elif app_state == APP_PLAYING: current_overlay = 'SETTINGS' 
                 
                 elif event.key == config['keys']['INTERACT'] and app_state == APP_PLAYING and not current_overlay:
+                    p_col, p_row = int(player.pos.x // TILE_SIZE), int(player.pos.y // TILE_SIZE)
+                    
                     if current_map_idx == -1: 
-                        p_col, p_row = int(player.pos.x // TILE_SIZE), int(player.pos.y // TILE_SIZE)
-                        
                         for r in range(max(0, p_row-1), min(len(NAYE_HOME_MAP), p_row+2)):
                             for c in range(max(0, p_col-1), min(len(NAYE_HOME_MAP[0]), p_col+2)):
                                 tc_x = c * TILE_SIZE + TILE_SIZE / 2
@@ -1007,6 +1002,18 @@ def main():
                                         player.has_bag = True
                                         popup_msg = "가방을 획득했습니다! (인벤토리 개방)"
                                         popup_timer = 2.5       
+                                        break
+                                        
+                    elif current_map_idx == 0:
+                        for r in range(max(0, p_row-1), min(len(CLASSROOM_MAP), p_row+2)):
+                            for c in range(max(0, p_col-1), min(len(CLASSROOM_MAP[0]), p_col+2)):
+                                tc_x = c * TILE_SIZE + TILE_SIZE / 2
+                                tc_y = r * TILE_SIZE + TILE_SIZE / 2
+                                
+                                if CLASSROOM_MAP[r][c] == 3: 
+                                    if pygame.math.Vector2(tc_x, tc_y).distance_to(player.pos) < 55:
+                                        if 'interact' in SOUNDS: SOUNDS['interact'].play()
+                                        current_overlay = 'SAVE'
                                         break
 
             if current_overlay:
@@ -1205,7 +1212,6 @@ def main():
                                     if enemy.hp <= 0:
                                         enemies.remove(enemy)
 
-                            # 충돌 로직이 작동하는 현재 맵 판별
                             current_tile_map = None
                             if current_map_idx == -1:
                                 current_tile_map = NAYE_HOME_MAP
@@ -1248,7 +1254,6 @@ def main():
             world_mouse_x = mx - VIEW_MARGIN_X + camera_x
             world_mouse_y = my - VIEW_MARGIN_Y + camera_y
             
-            # 맵 이동에 따른 충돌 맵 할당
             current_tile_map = None
             if current_map_idx == -1:
                 current_tile_map = NAYE_HOME_MAP
@@ -1429,6 +1434,23 @@ def main():
             if current_map_idx >= 0:
                 if current_map_idx == 0 and 'class_bg' in IMAGES:
                     view_surface.blit(IMAGES['class_bg'], (-camera_x, -camera_y))
+                    
+                    start_col = max(0, int(camera_x // TILE_SIZE))
+                    end_col = min(len(CLASSROOM_MAP[0]), int((camera_x + VIEW_W) // TILE_SIZE) + 1)
+                    start_row = max(0, int(camera_y // TILE_SIZE))
+                    end_row = min(len(CLASSROOM_MAP), int((camera_y + VIEW_H) // TILE_SIZE) + 1)
+                    for row_idx in range(start_row, end_row):
+                        for col_idx in range(start_col, end_col):
+                            if CLASSROOM_MAP[row_idx][col_idx] == 3:
+                                x = col_idx * TILE_SIZE - camera_x
+                                y = row_idx * TILE_SIZE - camera_y
+                                floating_offset = math.sin(pygame.time.get_ticks() * 0.005) * 3
+                                cx = x + TILE_SIZE / 2
+                                p1 = (cx - 6, y - 10 + floating_offset)
+                                p2 = (cx + 6, y - 10 + floating_offset)
+                                p3 = (cx, y - 2 + floating_offset)
+                                pygame.draw.polygon(view_surface, (255, 255, 100), [p1, p2, p3])
+                                pygame.draw.polygon(view_surface, (150, 150, 50), [p1, p2, p3], 1)
                 else:
                     for i in range(cols + 1):
                         x_pos = i * TILE_SIZE - camera_x
@@ -1460,15 +1482,16 @@ def main():
                     elif dy == 1: doors_to_draw.append('BOTTOM')
                     elif dy == -1: doors_to_draw.append('TOP')
                     
-                for d in doors_to_draw:
-                    if d == 'TOP':
-                        pygame.draw.rect(view_surface, door_color, (room_w//2 - door_half_w - camera_x, -camera_y, door_w, 30))
-                    elif d == 'BOTTOM':
-                        pygame.draw.rect(view_surface, door_color, (room_w//2 - door_half_w - camera_x, room_h - 30 - camera_y, door_w, 30))
-                    elif d == 'LEFT':
-                        pygame.draw.rect(view_surface, door_color, (-camera_x, room_h//2 - door_half_w - camera_y, 30, door_w))
-                    elif d == 'RIGHT':
-                        pygame.draw.rect(view_surface, door_color, (room_w - 30 - camera_x, room_h//2 - door_half_w - camera_y, 30, door_w))
+                if current_map_idx != 0:
+                    for d in doors_to_draw:
+                        if d == 'TOP':
+                            pygame.draw.rect(view_surface, door_color, (room_w//2 - door_half_w - camera_x, -camera_y, door_w, 30))
+                        elif d == 'BOTTOM':
+                            pygame.draw.rect(view_surface, door_color, (room_w//2 - door_half_w - camera_x, room_h - 30 - camera_y, door_w, 30))
+                        elif d == 'LEFT':
+                            pygame.draw.rect(view_surface, door_color, (-camera_x, room_h//2 - door_half_w - camera_y, 30, door_w))
+                        elif d == 'RIGHT':
+                            pygame.draw.rect(view_surface, door_color, (room_w - 30 - camera_x, room_h//2 - door_half_w - camera_y, 30, door_w))
                     
             else:
                 if 'naye_home_bg' in IMAGES:
@@ -1522,17 +1545,28 @@ def main():
 
             display_surface.blit(font.render(f"진행 시간: {format_time(current_play_time)} | [ESC] 설정", True, (200, 200, 200)), (40, 30))
             
-            if app_state == APP_PLAYING and current_map_idx == -1 and not current_overlay:
+            if app_state == APP_PLAYING and not current_overlay:
                 p_col, p_row = int(player.pos.x // TILE_SIZE), int(player.pos.y // TILE_SIZE)
                 is_near_interact = False
-                for r in range(max(0, p_row-1), min(len(NAYE_HOME_MAP), p_row+2)):
-                    for c in range(max(0, p_col-1), min(len(NAYE_HOME_MAP[0]), p_col+2)):
-                        if NAYE_HOME_MAP[r][c] in [2, 3]:
-                            tc_x = c * TILE_SIZE + TILE_SIZE / 2
-                            tc_y = r * TILE_SIZE + TILE_SIZE / 2
-                            if pygame.math.Vector2(tc_x, tc_y).distance_to(player.pos) < 55:
-                                is_near_interact = True
-                                break
+                
+                if current_map_idx == -1:
+                    for r in range(max(0, p_row-1), min(len(NAYE_HOME_MAP), p_row+2)):
+                        for c in range(max(0, p_col-1), min(len(NAYE_HOME_MAP[0]), p_col+2)):
+                            if NAYE_HOME_MAP[r][c] in [2, 3]:
+                                tc_x = c * TILE_SIZE + TILE_SIZE / 2
+                                tc_y = r * TILE_SIZE + TILE_SIZE / 2
+                                if pygame.math.Vector2(tc_x, tc_y).distance_to(player.pos) < 55:
+                                    is_near_interact = True
+                                    break
+                elif current_map_idx == 0: 
+                    for r in range(max(0, p_row-1), min(len(CLASSROOM_MAP), p_row+2)):
+                        for c in range(max(0, p_col-1), min(len(CLASSROOM_MAP[0]), p_col+2)):
+                            if CLASSROOM_MAP[r][c] == 3: 
+                                tc_x = c * TILE_SIZE + TILE_SIZE / 2
+                                tc_y = r * TILE_SIZE + TILE_SIZE / 2
+                                if pygame.math.Vector2(tc_x, tc_y).distance_to(player.pos) < 55:
+                                    is_near_interact = True
+                                    break
                 
                 if is_near_interact:
                     key_name = pygame.key.name(config['keys']['INTERACT']).upper()
@@ -1660,7 +1694,6 @@ def main():
             overlay_bg.fill((0, 0, 0, 180)); display_surface.blit(overlay_bg, (0, 0))
             
             if current_overlay == 'LEAVE_HOME':
-                # 다른 오버레이의 배경 상자는 그리지 않음 (텍스트만 띄움)
                 l1 = huge_font.render("학교로 가시겠습니까?", True, (255, 255, 255))
                 display_surface.blit(l1, (center_x - l1.get_width()//2, 280)) 
                 
@@ -1670,7 +1703,6 @@ def main():
                 warn_msg = small_font.render("전투가 시작되니 주의하세요!", True, (255, 150, 150))
                 display_surface.blit(warn_msg, (center_x - warn_msg.get_width()//2, 580))
             else:
-                # 설정창이나 저장창의 배경 상자
                 pygame.draw.rect(display_surface, (40, 40, 45), (center_x - 350, 150, 700, 600), border_radius=15)
                 pygame.draw.rect(display_surface, (200, 200, 200), (center_x - 350, 150, 700, 600), 3, border_radius=15)
 
