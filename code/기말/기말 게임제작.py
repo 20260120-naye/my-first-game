@@ -62,7 +62,7 @@ TILE_SIZE = 32
 # 교실(30x28) 및 컴퓨터실(40x28) 크기 반영
 MAP_DATA = [
     {"name": "교실", "cols": 30, "rows": 28},
-    {"name": "화장실", "cols": 26, "rows": 15}, 
+    {"name": "화장실", "cols": 30, "rows": 20}, 
     {"name": "보건실", "cols": 20, "rows": 30},
     {"name": "체육관", "cols": 60, "rows": 60},
     {"name": "급식실", "cols": 50, "rows": 60},
