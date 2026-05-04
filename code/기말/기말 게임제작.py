@@ -60,12 +60,12 @@ APP_MAIN_MENU = 0; APP_STORY = 1; APP_PLAYING = 2
 TILE_SIZE = 32 
 
 MAP_DATA = [
-    {"name": "교실", "cols": 40, "rows": 30},
+    {"name": "교실", "cols": 30, "rows": 28},
     {"name": "화장실", "cols": 26, "rows": 15}, 
     {"name": "보건실", "cols": 20, "rows": 30},
     {"name": "체육관", "cols": 60, "rows": 60},
     {"name": "급식실", "cols": 50, "rows": 60},
-    {"name": "컴퓨터실", "cols": 50, "rows": 50},
+    {"name": "컴퓨터실", "cols": 40, "rows": 28},
     {"name": "도서관", "cols": 60, "rows": 50},
     {"name": "교장실", "cols": 80, "rows": 60} 
 ]
@@ -340,6 +340,89 @@ def play_bgm(bgm_key):
             print(f"[경고] BGM 재생 실패 ({path}): {e}")
 
 # ==================== 이펙트 클래스 ====================
+
+class MonsterSpawn:
+    def __init__(self, x, y, is_boss=False):
+        self.pos = pygame.math.Vector2(x, y)
+        self.is_boss = is_boss
+        self.timer = 0.0
+        self.max_time = 0.8  # 원이 차오르는 시간
+        # 👇 대기 시간 1초로 단축!
+        self.delay = 1.0     
+        self.warning_radius = 45 if is_boss else 25
+
+    def update(self, dt):
+        if self.delay > 0:
+            self.delay -= dt
+            return False 
+            
+        self.timer += dt
+        return self.timer >= self.max_time
+
+    def draw(self, surface, cam_x, cam_y):
+        if self.delay > 0:
+            return 
+            
+        draw_x = int(self.pos.x - cam_x)
+        draw_y = int(self.pos.y - cam_y)
+        
+        progress = min(1.0, self.timer / self.max_time)
+        
+        alpha_surf = pygame.Surface((self.warning_radius * 2, self.warning_radius * 2), pygame.SRCALPHA)
+        
+        pygame.draw.circle(alpha_surf, (200, 30, 30, 40), (self.warning_radius, self.warning_radius), self.warning_radius)
+        
+        curr_radius = int(self.warning_radius * progress)
+        curr_alpha = int(40 + 200 * progress) 
+        if curr_radius > 0:
+            pygame.draw.circle(alpha_surf, (220, 20, 20, curr_alpha), (self.warning_radius, self.warning_radius), curr_radius)
+            
+        pygame.draw.circle(alpha_surf, (255, 50, 50, 150), (self.warning_radius, self.warning_radius), self.warning_radius, 2)
+        
+        scaled_surf = pygame.transform.scale(alpha_surf, (self.warning_radius * 2, int(self.warning_radius * 1.4)))
+        surface.blit(scaled_surf, (draw_x - self.warning_radius, draw_y - int(self.warning_radius * 0.7)))
+
+# 👇 스폰 시 도넛 형태로 중앙부터 퍼지며 사라지게 구현했습니다!
+class SpawnEffect:
+    def __init__(self, x, y):
+        self.pos = pygame.math.Vector2(x, y)
+        self.max_timer = 0.4
+        self.timer = 0.4
+        # 크기를 조금 더 줄임 (기존 40 -> 25)
+        self.radius = 25 
+        
+    def update(self, dt):
+        self.timer -= dt
+        
+    def draw(self, surface, cam_x, cam_y):
+        if self.timer <= 0: return
+        
+        progress = 1.0 - (self.timer / self.max_timer) # 0.0 에서 1.0으로 증가
+        
+        # 바깥쪽 반지름은 시간이 지날수록 살짝 넓어집니다.
+        current_radius = int(self.radius * (1.0 + progress * 0.5))
+        
+        # 핵심: 안쪽 반경(구멍)을 파내기 위한 로직. 시간이 지날수록 속이 파여나갑니다.
+        hole_radius = int(current_radius * progress)
+        thickness = current_radius - hole_radius
+        
+        alpha = max(0, int(255 * (1.0 - progress)))
+        
+        draw_x = int(self.pos.x - cam_x)
+        draw_y = int(self.pos.y - cam_y)
+        
+        temp_surf = pygame.Surface((current_radius * 2, current_radius * 2), pygame.SRCALPHA)
+        
+        # 두께가 존재할 때만 도넛(파문) 형태를 그립니다.
+        if thickness > 0:
+            pygame.draw.circle(temp_surf, (255, 255, 200, alpha), (current_radius, current_radius), current_radius, thickness)
+            # 빛이 선명하게 보이도록 안쪽 테두리 하나 더 추가
+            if thickness > 2:
+                pygame.draw.circle(temp_surf, (255, 255, 255, alpha), (current_radius, current_radius), current_radius, max(1, thickness // 2))
+        
+        # 바닥에 깔리는 입체감을 위해 위아래 스케일 조절 (1.2배)
+        scaled_surf = pygame.transform.scale(temp_surf, (current_radius * 2, int(current_radius * 1.2)))
+        surface.blit(scaled_surf, (draw_x - current_radius, draw_y - int(current_radius * 0.6)))
 
 class Particle:
     def __init__(self, x, y):
@@ -783,7 +866,8 @@ def main():
     room_w, room_h = cols * TILE_SIZE, rows * TILE_SIZE
     
     player = Player(room_w, room_h)
-    bullets = []; enemies = []; room_state = ROOM_WAITING
+    
+    bullets = []; enemies = []; spawners = []; room_state = ROOM_WAITING
     saves_data = get_save_data(); current_play_time = 0.0
     camera_x, camera_y = 0, 0
     
@@ -795,7 +879,6 @@ def main():
     popup_msg = ""
     popup_timer = 0.0
     
-    # 👇 [폰트 추가] 글씨 크기를 더 크게(60) 만들기 위해 huge_font를 추가했습니다.
     title_font = get_korean_font(100, bold=True)
     huge_font = get_korean_font(60, bold=True)
     font = get_korean_font(30)
@@ -854,7 +937,6 @@ def main():
     btn_confirm_yes_save = Button(-120, 450, 200, 70, "예 (저장)", base_col=(60, 150, 60))
     btn_confirm_no = Button(120, 450, 200, 70, "아니오", base_col=(80, 80, 90))
 
-    # 👇 [변경] 버튼을 기존 450에서 480으로 아래로 살짝 내렸습니다.
     btn_leave_yes = Button(-120, 480, 200, 70, "가자!", base_col=(60, 150, 60), hover_col=(80, 180, 80))
     btn_leave_no = Button(120, 480, 200, 70, "아직이야..", base_col=(80, 80, 90), hover_col=(100, 100, 110))
 
@@ -941,7 +1023,7 @@ def main():
                                 cols, rows = 26, 15 
                                 room_w, room_h = cols * TILE_SIZE, rows * TILE_SIZE
                                 player = Player(room_w, room_h)
-                                bullets.clear(); enemies.clear(); room_state = ROOM_WAITING; current_play_time = 0.0
+                                bullets.clear(); enemies.clear(); spawners.clear(); room_state = ROOM_WAITING; current_play_time = 0.0
                                 cleared_rooms = [False] * len(MAP_DATA) 
                                 damage_texts.clear(); slash_effects.clear(); particles.clear()
 
@@ -1024,7 +1106,7 @@ def main():
                                                 if NAYE_HOME_MAP[r][c] == 3:
                                                     NAYE_HOME_MAP[r][c] = 0
                                     
-                                    enemies.clear()
+                                    enemies.clear(); spawners.clear()
                                     for e in sd["enemies"]:
                                         en = Enemy(e["x"], e["y"], e.get("is_boss", False))
                                         en.hp = e["hp"]
@@ -1043,6 +1125,7 @@ def main():
                         
                         bullets.clear()
                         enemies.clear()
+                        spawners.clear()
                         damage_texts.clear()
                         slash_effects.clear() 
                         particles.clear()
@@ -1064,7 +1147,7 @@ def main():
                     
                     NAYE_HOME_MAP = load_tiled_map(layer_files, 26, 15)
                     
-                    bullets.clear(); enemies.clear(); damage_texts.clear(); slash_effects.clear(); particles.clear()
+                    bullets.clear(); enemies.clear(); spawners.clear(); damage_texts.clear(); slash_effects.clear(); particles.clear()
                     room_state = ROOM_CLEARED
                     current_play_time = 0.0
                     app_state = APP_PLAYING
@@ -1170,6 +1253,14 @@ def main():
                 p.update(dt)
                 if p.lifetime <= 0:
                     particles.remove(p)
+                    
+            for sp in spawners[:]:
+                if sp.update(dt):
+                    enemies.append(Enemy(sp.pos.x, sp.pos.y, sp.is_boss))
+                    
+                    slash_effects.append(SpawnEffect(sp.pos.x, sp.pos.y))
+                    
+                    spawners.remove(sp)
 
             if room_w >= VIEW_W: camera_x = max(0, min(player.pos.x - VIEW_W / 2, room_w - VIEW_W))
             else: camera_x = -(VIEW_W - room_w) // 2
@@ -1182,37 +1273,22 @@ def main():
                     room_state = ROOM_CLEARED
                 elif not cleared_rooms[current_map_idx]: 
                     room_state = ROOM_COMBAT
+                    spawners.clear()
+                    
                     if current_map_idx == len(MAP_DATA) - 1:
-                        enemies.append(Enemy(room_w // 2, room_h // 2, is_boss=True))
+                        spawn_count = 1
+                        is_boss = True
                     else:
-                        pos_curr = minimap_positions[current_map_idx]
-                        pos_next = minimap_positions[current_map_idx + 1]
-                        dx = pos_next[0] - pos_curr[0]
-                        dy = pos_next[1] - pos_curr[1]
+                        spawn_count = 3
+                        is_boss = False
                         
-                        door_x, door_y = room_w // 2, room_h // 2
-                        off_x, off_y = 0, 0
-                        
-                        if dy == -1: 
-                            door_x, door_y = room_w // 2, 80
-                            off_x, off_y = 0, 120 
-                        elif dy == 1: 
-                            door_x, door_y = room_w // 2, room_h - 80
-                            off_x, off_y = 0, -120 
-                        elif dx == -1: 
-                            door_x, door_y = 80, room_h // 2
-                            off_x, off_y = 120, 0 
-                        elif dx == 1: 
-                            door_x, door_y = room_w - 80, room_h // 2
-                            off_x, off_y = -120, 0 
-                            
-                        enemies.append(Enemy(door_x + off_x, door_y + off_y))
-                        if off_x == 0:
-                            enemies.append(Enemy(door_x - 80, door_y + off_y + (40 if off_y > 0 else -40)))
-                            enemies.append(Enemy(door_x + 80, door_y + off_y + (40 if off_y > 0 else -40)))
-                        else:
-                            enemies.append(Enemy(door_x + off_x + (40 if off_x > 0 else -40), door_y - 80))
-                            enemies.append(Enemy(door_x + off_x + (40 if off_x > 0 else -40), door_y + 80))
+                    for _ in range(spawn_count):
+                        for _ in range(50): 
+                            sx = random.randint(TILE_SIZE * 2, room_w - TILE_SIZE * 2)
+                            sy = random.randint(TILE_SIZE * 2, room_h - TILE_SIZE * 2)
+                            if pygame.math.Vector2(sx, sy).distance_to(player.pos) > 100:
+                                break
+                        spawners.append(MonsterSpawn(sx, sy, is_boss=is_boss))
                         
             elif room_state == ROOM_COMBAT:
                 for enemy in enemies: enemy.update(dt, player.pos)
@@ -1233,7 +1309,8 @@ def main():
                             if bullet in bullets: bullets.remove(bullet)
                             if enemy.hp <= 0: enemies.remove(enemy)
                             break
-                if len(enemies) == 0: 
+                
+                if len(enemies) == 0 and len(spawners) == 0: 
                     room_state = ROOM_CLEARED
                     if current_map_idx >= 0:
                         cleared_rooms[current_map_idx] = True
@@ -1308,6 +1385,7 @@ def main():
                         room_state = ROOM_CLEARED if cleared_rooms[current_map_idx] else ROOM_WAITING
                     bullets.clear()
                     enemies.clear()
+                    spawners.clear()
                     damage_texts.clear()
                     slash_effects.clear() 
                     particles.clear()
@@ -1401,6 +1479,9 @@ def main():
                             p3 = (cx, y - 2 + floating_offset)
                             pygame.draw.polygon(view_surface, (255, 255, 100), [p1, p2, p3])
                             pygame.draw.polygon(view_surface, (150, 150, 50), [p1, p2, p3], 1)
+
+            for sp in spawners:
+                sp.draw(view_surface, camera_x, camera_y)
 
             if room_state == ROOM_COMBAT:
                 for enemy in enemies: enemy.draw(view_surface, camera_x, camera_y)
@@ -1623,18 +1704,13 @@ def main():
                         if saves_data[f"slot_{i+1}"]: delete_buttons[i].draw(display_surface, center_x, scaled_mouse_pos)
                     btn_close_overlay.draw(display_surface, center_x, scaled_mouse_pos)
 
-            # 👇 [핵심 변경] 질문 문구를 훨씬 크게 만들고, 버튼은 내리고, 경고 문구는 연한 빨간색으로!
             elif current_overlay == 'LEAVE_HOME':
-                # 기존 large_font(40) 대신 huge_font(60)를 사용하여 크기 대폭 확대
                 l1 = huge_font.render("학교로 가시겠습니까?", True, (255, 255, 255))
-                # 글씨가 커진 만큼 Y축을 280으로 조절하여 시각적 균형을 맞춤
                 display_surface.blit(l1, (center_x - l1.get_width()//2, 280)) 
                 
-                # 버튼을 기존 450에서 480으로 아래로 내림
                 btn_leave_yes.draw(display_surface, center_x, scaled_mouse_pos)
                 btn_leave_no.draw(display_surface, center_x, scaled_mouse_pos)
                 
-                # 버튼 아래(y=580)에 연한 빨간색(255, 150, 150) 글씨로 경고 문구 추가
                 warn_msg = small_font.render("전투가 시작되니 주의하세요!", True, (255, 150, 150))
                 display_surface.blit(warn_msg, (center_x - warn_msg.get_width()//2, 580))
 
