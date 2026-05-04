@@ -795,7 +795,9 @@ def main():
     popup_msg = ""
     popup_timer = 0.0
     
+    # 👇 [폰트 추가] 글씨 크기를 더 크게(60) 만들기 위해 huge_font를 추가했습니다.
     title_font = get_korean_font(100, bold=True)
+    huge_font = get_korean_font(60, bold=True)
     font = get_korean_font(30)
     large_font = get_korean_font(40)
     small_font = get_korean_font(20)
@@ -852,9 +854,9 @@ def main():
     btn_confirm_yes_save = Button(-120, 450, 200, 70, "예 (저장)", base_col=(60, 150, 60))
     btn_confirm_no = Button(120, 450, 200, 70, "아니오", base_col=(80, 80, 90))
 
-    # 👇 [추가] 방에서 나갈 때 사용되는 버튼입니다. (초록색과 기본 회색 지정)
-    btn_leave_yes = Button(-120, 450, 200, 70, "가자!", base_col=(60, 150, 60), hover_col=(80, 180, 80))
-    btn_leave_no = Button(120, 450, 200, 70, "아직이야..", base_col=(80, 80, 90), hover_col=(100, 100, 110))
+    # 👇 [변경] 버튼을 기존 450에서 480으로 아래로 살짝 내렸습니다.
+    btn_leave_yes = Button(-120, 480, 200, 70, "가자!", base_col=(60, 150, 60), hover_col=(80, 180, 80))
+    btn_leave_no = Button(120, 480, 200, 70, "아직이야..", base_col=(80, 80, 90), hover_col=(100, 100, 110))
 
     running = True
     while running:
@@ -862,16 +864,15 @@ def main():
         scaled_mouse_pos = get_scaled_mouse_pos()
         center_x = LOGICAL_WIDTH // 2
 
-        # 👇 [BGM 로직 수정] 나예 방(-1)에서는 BGM 없이, 밖으로 나가야 게임배경 재생
         if app_state == APP_MAIN_MENU:
             play_bgm('title')
         elif app_state == APP_STORY:
             play_bgm(None) 
         elif app_state == APP_PLAYING:
             if current_map_idx == -1:
-                play_bgm(None) # 나예의 방: 적막
+                play_bgm(None) 
             else:
-                play_bgm('game') # 밖으로 나감: 웅장한 게임 BGM 시작!
+                play_bgm('game') 
 
         for i in range(3):
             slot_key = f"slot_{i+1}"
@@ -1031,7 +1032,6 @@ def main():
                                         
                                     bullets.clear(); damage_texts.clear(); slash_effects.clear(); particles.clear(); app_state = APP_PLAYING; current_overlay = None; break
 
-                # 👇 [새로운 시스템] 방을 나갈 때 확인 버튼 클릭 로직
                 elif current_overlay == 'LEAVE_HOME':
                     if btn_leave_yes.is_clicked(event, scaled_mouse_pos):
                         current_map_idx = 0
@@ -1246,7 +1246,6 @@ def main():
                 if current_map_idx == -1:
                     if (room_w//2 - 100 < player.pos.x < room_w//2 + 100) and player.pos.y > room_h - 45:
                         if player.has_bag:
-                            # 👇 [새로운 시스템] 방을 나갈 때 확인 팝업을 띄우고 뒤로 물러납니다.
                             current_overlay = 'LEAVE_HOME'
                             player.pos.y = room_h - 60 
                         else:
@@ -1594,15 +1593,18 @@ def main():
                 elif current_tab == "AUDIO":
                     txt1 = font.render(f"마스터 볼륨: {config['volume']}%", True, (255, 255, 255))
                     display_surface.blit(txt1, (center_x - txt1.get_width()//2, 275))
-                    btn_vol_down.draw(display_surface, center_x, scaled_mouse_pos); btn_vol_up.draw(display_surface, center_x, scaled_mouse_pos)
+                    btn_vol_down.draw(display_surface, center_x, scaled_mouse_pos)
+                    btn_vol_up.draw(display_surface, center_x, scaled_mouse_pos)
                     
                     txt2 = font.render(f"배경 볼륨: {config.get('bgm_volume', 50)}%", True, (255, 255, 255))
                     display_surface.blit(txt2, (center_x - txt2.get_width()//2, 405))
-                    btn_bgm_vol_down.draw(display_surface, center_x, scaled_mouse_pos); btn_bgm_vol_up.draw(display_surface, center_x, scaled_mouse_pos)
+                    btn_bgm_vol_down.draw(display_surface, center_x, scaled_mouse_pos)
+                    btn_bgm_vol_up.draw(display_surface, center_x, scaled_mouse_pos)
                     
                     txt3 = font.render(f"음성 볼륨: {config['voice_volume']}%", True, (255, 255, 255))
                     display_surface.blit(txt3, (center_x - txt3.get_width()//2, 535))
-                    btn_voice_vol_down.draw(display_surface, center_x, scaled_mouse_pos); btn_voice_vol_up.draw(display_surface, center_x, scaled_mouse_pos)
+                    btn_voice_vol_down.draw(display_surface, center_x, scaled_mouse_pos)
+                    btn_voice_vol_up.draw(display_surface, center_x, scaled_mouse_pos)
 
             elif current_overlay in ['SAVE', 'LOAD']:
                 if confirm_delete_slot:
@@ -1621,12 +1623,20 @@ def main():
                         if saves_data[f"slot_{i+1}"]: delete_buttons[i].draw(display_surface, center_x, scaled_mouse_pos)
                     btn_close_overlay.draw(display_surface, center_x, scaled_mouse_pos)
 
-            # 👇 [추가] 학교로 가기 전의 확인 팝업 화면입니다.
+            # 👇 [핵심 변경] 질문 문구를 훨씬 크게 만들고, 버튼은 내리고, 경고 문구는 연한 빨간색으로!
             elif current_overlay == 'LEAVE_HOME':
-                l1 = large_font.render("학교로 가시겠습니까?", True, (255, 255, 255))
-                display_surface.blit(l1, (center_x - l1.get_width()//2, 350))
+                # 기존 large_font(40) 대신 huge_font(60)를 사용하여 크기 대폭 확대
+                l1 = huge_font.render("학교로 가시겠습니까?", True, (255, 255, 255))
+                # 글씨가 커진 만큼 Y축을 280으로 조절하여 시각적 균형을 맞춤
+                display_surface.blit(l1, (center_x - l1.get_width()//2, 280)) 
+                
+                # 버튼을 기존 450에서 480으로 아래로 내림
                 btn_leave_yes.draw(display_surface, center_x, scaled_mouse_pos)
                 btn_leave_no.draw(display_surface, center_x, scaled_mouse_pos)
+                
+                # 버튼 아래(y=580)에 연한 빨간색(255, 150, 150) 글씨로 경고 문구 추가
+                warn_msg = small_font.render("전투가 시작되니 주의하세요!", True, (255, 150, 150))
+                display_surface.blit(warn_msg, (center_x - warn_msg.get_width()//2, 580))
 
         if 'cursor_normal' in IMAGES and 'cursor_click' in IMAGES:
             pygame.mouse.set_visible(False)
