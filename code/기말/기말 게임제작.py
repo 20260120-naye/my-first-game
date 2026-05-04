@@ -59,7 +59,6 @@ APP_MAIN_MENU = 0; APP_STORY = 1; APP_PLAYING = 2
 
 TILE_SIZE = 32 
 
-# 교실(30x28) 및 컴퓨터실(40x28) 크기 반영
 MAP_DATA = [
     {"name": "교실", "cols": 30, "rows": 28},
     {"name": "화장실", "cols": 30, "rows": 20}, 
@@ -123,6 +122,12 @@ layer_files_class = [
 ]
 CLASSROOM_MAP = load_tiled_map(layer_files_class, MAP_DATA[0]['cols'], MAP_DATA[0]['rows'])
 
+layer_files_toilet = [
+    "./code/기말/assets/school_toilet/화장실_충돌_수정.csv", 
+    "./code/기말/assets/school_toilet/화장실_충돌.csv"
+]
+TOILET_MAP = load_tiled_map(layer_files_toilet, MAP_DATA[1]['cols'], MAP_DATA[1]['rows'])
+
 # ==================== 이미지 자원 관리 ====================
 IMAGES = {}
 
@@ -137,10 +142,15 @@ def load_images():
         bg_img = pygame.image.load("./code/기말/assets/naye_home/나예집_배경.png").convert_alpha()
         IMAGES['naye_home_bg'] = pygame.transform.scale(bg_img, (26 * TILE_SIZE, 15 * TILE_SIZE))
     except: pass
-
+    
     try:
         class_bg_img = pygame.image.load("./code/기말/assets/school_class/학교_교실.png").convert_alpha()
         IMAGES['class_bg'] = pygame.transform.scale(class_bg_img, (MAP_DATA[0]['cols'] * TILE_SIZE, MAP_DATA[0]['rows'] * TILE_SIZE))
+    except: pass
+
+    try:
+        toilet_bg_img = pygame.image.load("./code/기말/assets/school_toilet/학교_화장실.png").convert_alpha()
+        IMAGES['toilet_bg'] = pygame.transform.scale(toilet_bg_img, (MAP_DATA[1]['cols'] * TILE_SIZE, MAP_DATA[1]['rows'] * TILE_SIZE))
     except: pass
 
     try:
@@ -843,7 +853,7 @@ def update_display(mode):
     current_width, current_height = screen.get_width(), screen.get_height()
 
 def main():
-    global current_width, current_height, screen, NAYE_HOME_MAP, CLASSROOM_MAP
+    global current_width, current_height, screen, NAYE_HOME_MAP, CLASSROOM_MAP, TOILET_MAP
     
     load_config()
     update_display(config['display_mode'])
@@ -1004,13 +1014,14 @@ def main():
                                         popup_timer = 2.5       
                                         break
                                         
-                    elif current_map_idx == 0:
-                        for r in range(max(0, p_row-1), min(len(CLASSROOM_MAP), p_row+2)):
-                            for c in range(max(0, p_col-1), min(len(CLASSROOM_MAP[0]), p_col+2)):
+                    elif current_map_idx in [0, 1]:
+                        target_map = CLASSROOM_MAP if current_map_idx == 0 else TOILET_MAP
+                        for r in range(max(0, p_row-1), min(len(target_map), p_row+2)):
+                            for c in range(max(0, p_col-1), min(len(target_map[0]), p_col+2)):
                                 tc_x = c * TILE_SIZE + TILE_SIZE / 2
                                 tc_y = r * TILE_SIZE + TILE_SIZE / 2
                                 
-                                if CLASSROOM_MAP[r][c] == 3: 
+                                if target_map[r][c] == 3: 
                                     if pygame.math.Vector2(tc_x, tc_y).distance_to(player.pos) < 55:
                                         if 'interact' in SOUNDS: SOUNDS['interact'].play()
                                         current_overlay = 'SAVE'
@@ -1217,6 +1228,8 @@ def main():
                                 current_tile_map = NAYE_HOME_MAP
                             elif current_map_idx == 0:
                                 current_tile_map = CLASSROOM_MAP
+                            elif current_map_idx == 1:
+                                current_tile_map = TOILET_MAP
 
                             if current_tile_map:
                                 hit_4_tiles = []
@@ -1259,6 +1272,8 @@ def main():
                 current_tile_map = NAYE_HOME_MAP
             elif current_map_idx == 0:
                 current_tile_map = CLASSROOM_MAP
+            elif current_map_idx == 1:
+                current_tile_map = TOILET_MAP
                 
             player.move(dt, room_w, room_h, world_mouse_x, world_mouse_y, current_map_idx, current_tile_map)
             current_play_time += dt
@@ -1434,14 +1449,18 @@ def main():
             if current_map_idx >= 0:
                 if current_map_idx == 0 and 'class_bg' in IMAGES:
                     view_surface.blit(IMAGES['class_bg'], (-camera_x, -camera_y))
+                elif current_map_idx == 1 and 'toilet_bg' in IMAGES:
+                    view_surface.blit(IMAGES['toilet_bg'], (-camera_x, -camera_y))
                     
+                if current_map_idx in [0, 1]:
+                    target_map = CLASSROOM_MAP if current_map_idx == 0 else TOILET_MAP
                     start_col = max(0, int(camera_x // TILE_SIZE))
-                    end_col = min(len(CLASSROOM_MAP[0]), int((camera_x + VIEW_W) // TILE_SIZE) + 1)
+                    end_col = min(len(target_map[0]), int((camera_x + VIEW_W) // TILE_SIZE) + 1)
                     start_row = max(0, int(camera_y // TILE_SIZE))
-                    end_row = min(len(CLASSROOM_MAP), int((camera_y + VIEW_H) // TILE_SIZE) + 1)
+                    end_row = min(len(target_map), int((camera_y + VIEW_H) // TILE_SIZE) + 1)
                     for row_idx in range(start_row, end_row):
                         for col_idx in range(start_col, end_col):
-                            if CLASSROOM_MAP[row_idx][col_idx] == 3:
+                            if target_map[row_idx][col_idx] == 3:
                                 x = col_idx * TILE_SIZE - camera_x
                                 y = row_idx * TILE_SIZE - camera_y
                                 floating_offset = math.sin(pygame.time.get_ticks() * 0.005) * 3
@@ -1451,7 +1470,8 @@ def main():
                                 p3 = (cx, y - 2 + floating_offset)
                                 pygame.draw.polygon(view_surface, (255, 255, 100), [p1, p2, p3])
                                 pygame.draw.polygon(view_surface, (150, 150, 50), [p1, p2, p3], 1)
-                else:
+                                
+                if current_map_idx not in [0, 1]:
                     for i in range(cols + 1):
                         x_pos = i * TILE_SIZE - camera_x
                         pygame.draw.line(view_surface, GRID_COLOR, (x_pos, -camera_y), (x_pos, room_h - camera_y), 1)
@@ -1482,7 +1502,7 @@ def main():
                     elif dy == 1: doors_to_draw.append('BOTTOM')
                     elif dy == -1: doors_to_draw.append('TOP')
                     
-                if current_map_idx != 0:
+                if current_map_idx not in [0, 1]:
                     for d in doors_to_draw:
                         if d == 'TOP':
                             pygame.draw.rect(view_surface, door_color, (room_w//2 - door_half_w - camera_x, -camera_y, door_w, 30))
@@ -1558,10 +1578,11 @@ def main():
                                 if pygame.math.Vector2(tc_x, tc_y).distance_to(player.pos) < 55:
                                     is_near_interact = True
                                     break
-                elif current_map_idx == 0: 
-                    for r in range(max(0, p_row-1), min(len(CLASSROOM_MAP), p_row+2)):
-                        for c in range(max(0, p_col-1), min(len(CLASSROOM_MAP[0]), p_col+2)):
-                            if CLASSROOM_MAP[r][c] == 3: 
+                elif current_map_idx in [0, 1]: 
+                    target_map = CLASSROOM_MAP if current_map_idx == 0 else TOILET_MAP
+                    for r in range(max(0, p_row-1), min(len(target_map), p_row+2)):
+                        for c in range(max(0, p_col-1), min(len(target_map[0]), p_col+2)):
+                            if target_map[r][c] == 3: 
                                 tc_x = c * TILE_SIZE + TILE_SIZE / 2
                                 tc_y = r * TILE_SIZE + TILE_SIZE / 2
                                 if pygame.math.Vector2(tc_x, tc_y).distance_to(player.pos) < 55:
@@ -1693,6 +1714,10 @@ def main():
             overlay_bg = pygame.Surface((LOGICAL_WIDTH, LOGICAL_HEIGHT), pygame.SRCALPHA)
             overlay_bg.fill((0, 0, 0, 180)); display_surface.blit(overlay_bg, (0, 0))
             
+            # 👇 핵심 수정 파트: 모든 오버레이에 창(회색 테두리 상자)이 그려지도록 복원했습니다!
+            pygame.draw.rect(display_surface, (40, 40, 45), (center_x - 350, 150, 700, 600), border_radius=15)
+            pygame.draw.rect(display_surface, (200, 200, 200), (center_x - 350, 150, 700, 600), 3, border_radius=15)
+
             if current_overlay == 'LEAVE_HOME':
                 l1 = huge_font.render("학교로 가시겠습니까?", True, (255, 255, 255))
                 display_surface.blit(l1, (center_x - l1.get_width()//2, 280)) 
@@ -1702,72 +1727,69 @@ def main():
                 
                 warn_msg = small_font.render("전투가 시작되니 주의하세요!", True, (255, 150, 150))
                 display_surface.blit(warn_msg, (center_x - warn_msg.get_width()//2, 580))
-            else:
-                pygame.draw.rect(display_surface, (40, 40, 45), (center_x - 350, 150, 700, 600), border_radius=15)
-                pygame.draw.rect(display_surface, (200, 200, 200), (center_x - 350, 150, 700, 600), 3, border_radius=15)
+            
+            elif current_overlay == 'SETTINGS':
+                if current_tab == "KEYS":
+                    for action, btn in key_buttons.items():
+                        key_val = config['keys'][action]
+                        key_name = pygame.key.name(key_val).upper()
+                        
+                        if waiting_for_key == action:
+                            btn.text = "대기중"
+                            btn.base_color = (150, 50, 50)
+                        else:
+                            btn.text = key_name
+                            btn.base_color = (80, 80, 90)
+                        
+                        btn.draw(display_surface, center_x, scaled_mouse_pos)
+                        
+                        lbl_surf = small_font.render(key_labels_kr[action], True, (255, 255, 255))
+                        lbl_x = center_x + btn.rel_x - lbl_surf.get_width() // 2
+                        lbl_y = btn.rect.y - lbl_surf.get_height() - 8
+                        display_surface.blit(lbl_surf, (lbl_x, lbl_y))
 
-                if current_overlay == 'SETTINGS':
-                    if current_tab == "KEYS":
-                        for action, btn in key_buttons.items():
-                            key_val = config['keys'][action]
-                            key_name = pygame.key.name(key_val).upper()
-                            
-                            if waiting_for_key == action:
-                                btn.text = "대기중"
-                                btn.base_color = (150, 50, 50)
-                            else:
-                                btn.text = key_name
-                                btn.base_color = (80, 80, 90)
-                            
-                            btn.draw(display_surface, center_x, scaled_mouse_pos)
-                            
-                            lbl_surf = small_font.render(key_labels_kr[action], True, (255, 255, 255))
-                            lbl_x = center_x + btn.rel_x - lbl_surf.get_width() // 2
-                            lbl_y = btn.rect.y - lbl_surf.get_height() - 8
-                            display_surface.blit(lbl_surf, (lbl_x, lbl_y))
+                btn_video.draw(display_surface, center_x, scaled_mouse_pos)
+                btn_audio.draw(display_surface, center_x, scaled_mouse_pos)
+                btn_keys.draw(display_surface, center_x, scaled_mouse_pos)
+                
+                if app_state == APP_MAIN_MENU: btn_close_overlay.draw(display_surface, center_x, scaled_mouse_pos)
+                elif app_state == APP_PLAYING:
+                    btn_return_main.draw(display_surface, center_x, scaled_mouse_pos); btn_close_settings_game.draw(display_surface, center_x, scaled_mouse_pos)
 
-                    btn_video.draw(display_surface, center_x, scaled_mouse_pos)
-                    btn_audio.draw(display_surface, center_x, scaled_mouse_pos)
-                    btn_keys.draw(display_surface, center_x, scaled_mouse_pos)
+                if current_tab == "VIDEO":
+                    btn_window.draw(display_surface, center_x, scaled_mouse_pos); btn_borderless.draw(display_surface, center_x, scaled_mouse_pos); btn_fullscreen.draw(display_surface, center_x, scaled_mouse_pos)
+                elif current_tab == "AUDIO":
+                    txt1 = font.render(f"마스터 볼륨: {config['volume']}%", True, (255, 255, 255))
+                    display_surface.blit(txt1, (center_x - txt1.get_width()//2, 275))
+                    btn_vol_down.draw(display_surface, center_x, scaled_mouse_pos)
+                    btn_vol_up.draw(display_surface, center_x, scaled_mouse_pos)
                     
-                    if app_state == APP_MAIN_MENU: btn_close_overlay.draw(display_surface, center_x, scaled_mouse_pos)
-                    elif app_state == APP_PLAYING:
-                        btn_return_main.draw(display_surface, center_x, scaled_mouse_pos); btn_close_settings_game.draw(display_surface, center_x, scaled_mouse_pos)
+                    txt2 = font.render(f"배경 볼륨: {config.get('bgm_volume', 50)}%", True, (255, 255, 255))
+                    display_surface.blit(txt2, (center_x - txt2.get_width()//2, 405))
+                    btn_bgm_vol_down.draw(display_surface, center_x, scaled_mouse_pos)
+                    btn_bgm_vol_up.draw(display_surface, center_x, scaled_mouse_pos)
+                    
+                    txt3 = font.render(f"음성 볼륨: {config['voice_volume']}%", True, (255, 255, 255))
+                    display_surface.blit(txt3, (center_x - txt3.get_width()//2, 535))
+                    btn_voice_vol_down.draw(display_surface, center_x, scaled_mouse_pos)
+                    btn_voice_vol_up.draw(display_surface, center_x, scaled_mouse_pos)
 
-                    if current_tab == "VIDEO":
-                        btn_window.draw(display_surface, center_x, scaled_mouse_pos); btn_borderless.draw(display_surface, center_x, scaled_mouse_pos); btn_fullscreen.draw(display_surface, center_x, scaled_mouse_pos)
-                    elif current_tab == "AUDIO":
-                        txt1 = font.render(f"마스터 볼륨: {config['volume']}%", True, (255, 255, 255))
-                        display_surface.blit(txt1, (center_x - txt1.get_width()//2, 275))
-                        btn_vol_down.draw(display_surface, center_x, scaled_mouse_pos)
-                        btn_vol_up.draw(display_surface, center_x, scaled_mouse_pos)
-                        
-                        txt2 = font.render(f"배경 볼륨: {config.get('bgm_volume', 50)}%", True, (255, 255, 255))
-                        display_surface.blit(txt2, (center_x - txt2.get_width()//2, 405))
-                        btn_bgm_vol_down.draw(display_surface, center_x, scaled_mouse_pos)
-                        btn_bgm_vol_up.draw(display_surface, center_x, scaled_mouse_pos)
-                        
-                        txt3 = font.render(f"음성 볼륨: {config['voice_volume']}%", True, (255, 255, 255))
-                        display_surface.blit(txt3, (center_x - txt3.get_width()//2, 535))
-                        btn_voice_vol_down.draw(display_surface, center_x, scaled_mouse_pos)
-                        btn_voice_vol_up.draw(display_surface, center_x, scaled_mouse_pos)
-
-                elif current_overlay in ['SAVE', 'LOAD']:
-                    if confirm_delete_slot:
-                        l1 = large_font.render(f"슬롯 {confirm_delete_slot}의 데이터를 정말", True, (255, 100, 100)); l2 = large_font.render("삭제하시겠습니까?", True, (255, 100, 100))
-                        display_surface.blit(l1, (center_x - l1.get_width()//2, 290)); display_surface.blit(l2, (center_x - l2.get_width()//2, 350))
-                        btn_confirm_yes_del.draw(display_surface, center_x, scaled_mouse_pos); btn_confirm_no.draw(display_surface, center_x, scaled_mouse_pos)
-                    elif confirm_save_slot:
-                        l1 = large_font.render(f"슬롯 {confirm_save_slot}에 진행상황을", True, (100, 255, 100)); l2 = large_font.render("저장하시겠습니까?", True, (100, 255, 100))
-                        display_surface.blit(l1, (center_x - l1.get_width()//2, 290)); display_surface.blit(l2, (center_x - l2.get_width()//2, 350))
-                        btn_confirm_yes_save.draw(display_surface, center_x, scaled_mouse_pos); btn_confirm_no.draw(display_surface, center_x, scaled_mouse_pos)
-                    else:
-                        ts = large_font.render("진행상황 저장" if current_overlay == 'SAVE' else "게임 불러오기", True, (255, 255, 255))
-                        display_surface.blit(ts, (center_x - ts.get_width()//2, 170))
-                        for i in range(3): 
-                            slot_buttons[i].draw(display_surface, center_x, scaled_mouse_pos)
-                            if saves_data[f"slot_{i+1}"]: delete_buttons[i].draw(display_surface, center_x, scaled_mouse_pos)
-                        btn_close_overlay.draw(display_surface, center_x, scaled_mouse_pos)
+            elif current_overlay in ['SAVE', 'LOAD']:
+                if confirm_delete_slot:
+                    l1 = large_font.render(f"슬롯 {confirm_delete_slot}의 데이터를 정말", True, (255, 100, 100)); l2 = large_font.render("삭제하시겠습니까?", True, (255, 100, 100))
+                    display_surface.blit(l1, (center_x - l1.get_width()//2, 290)); display_surface.blit(l2, (center_x - l2.get_width()//2, 350))
+                    btn_confirm_yes_del.draw(display_surface, center_x, scaled_mouse_pos); btn_confirm_no.draw(display_surface, center_x, scaled_mouse_pos)
+                elif confirm_save_slot:
+                    l1 = large_font.render(f"슬롯 {confirm_save_slot}에 진행상황을", True, (100, 255, 100)); l2 = large_font.render("저장하시겠습니까?", True, (100, 255, 100))
+                    display_surface.blit(l1, (center_x - l1.get_width()//2, 290)); display_surface.blit(l2, (center_x - l2.get_width()//2, 350))
+                    btn_confirm_yes_save.draw(display_surface, center_x, scaled_mouse_pos); btn_confirm_no.draw(display_surface, center_x, scaled_mouse_pos)
+                else:
+                    ts = large_font.render("진행상황 저장" if current_overlay == 'SAVE' else "게임 불러오기", True, (255, 255, 255))
+                    display_surface.blit(ts, (center_x - ts.get_width()//2, 170))
+                    for i in range(3): 
+                        slot_buttons[i].draw(display_surface, center_x, scaled_mouse_pos)
+                        if saves_data[f"slot_{i+1}"]: delete_buttons[i].draw(display_surface, center_x, scaled_mouse_pos)
+                    btn_close_overlay.draw(display_surface, center_x, scaled_mouse_pos)
 
         if 'cursor_normal' in IMAGES and 'cursor_click' in IMAGES:
             pygame.mouse.set_visible(False)
