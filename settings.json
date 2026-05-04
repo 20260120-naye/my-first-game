@@ -1,7 +1,7 @@
 {
     "display_mode": "BORDERLESS",
     "volume": 50,
-    "combat_volume": 50,
+    "bgm_volume": 50,
     "voice_volume": 50,
     "keys": {
         "UP": 119,
@@ -10,5 +10,6 @@
         "RIGHT": 100,
         "INTERACT": 101,
         "DASH": 32
-    }
+    },
+    "combat_volume": 50
 }

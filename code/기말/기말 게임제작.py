@@ -6,8 +6,9 @@ import csv  # Tiled CSV 파일을 읽기 위한 모듈
 import math 
 import random 
 
-# Pygame 초기화
+# Pygame 및 Mixer 초기화
 pygame.init()
+pygame.mixer.init() # 사운드를 위한 Mixer 초기화
 
 # ==================== 한글 폰트 자동 탐색 함수 ====================
 _cached_fonts = {}
@@ -220,8 +221,9 @@ def load_images():
 
 # ==================== 설정(Config) 및 세이브 ====================
 CONFIG_FILE = "settings.json"
+# 👇 [수정] combat_volume을 삭제하고 bgm_volume을 추가했습니다.
 config = {
-    'display_mode': 'WINDOW', 'volume': 50, 'combat_volume': 50, 'voice_volume': 50,
+    'display_mode': 'WINDOW', 'volume': 50, 'bgm_volume': 50, 'voice_volume': 50,
     'keys': {
         'UP': pygame.K_w, 'DOWN': pygame.K_s, 'LEFT': pygame.K_a, 'RIGHT': pygame.K_d,
         'INTERACT': pygame.K_e, 'DASH': pygame.K_SPACE
@@ -282,6 +284,42 @@ class Button:
 
     def is_clicked(self, event, scaled_mouse_pos):
         return event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.rect.collidepoint(scaled_mouse_pos)
+
+
+# ==================== 사운드 자원 관리 ====================
+SOUNDS = {}
+
+def load_sounds():
+    def load_snd(name, filename):
+        path = f"./code/기말/assets/sound/{filename}"
+        if os.path.exists(path):
+            try:
+                SOUNDS[name] = pygame.mixer.Sound(path)
+            except Exception as e:
+                print(f"[경고] 사운드 로딩 실패 ({filename}): {e}")
+        else:
+            print(f"[알림] 사운드 파일이 없습니다: {path}")
+
+    load_snd('attack', '칼공격.mp3')
+    load_snd('hit', '칼피격.mp3')
+    load_snd('interact', '상호작용.mp3')
+    load_snd('dash', '대쉬.mp3')
+    
+    update_sound_volumes()
+
+def update_sound_volumes():
+    # 👇 [핵심 변경] 전투 볼륨을 삭제하고 모든 효과음을 마스터 볼륨에 통합했습니다.
+    master_vol = config.get('volume', 50) / 100.0
+    bgm_vol = config.get('bgm_volume', 50) / 100.0 # 추후 추가될 BGM을 위한 변수
+    
+    # 효과음은 모두 마스터 볼륨의 크기를 그대로 따릅니다.
+    if 'attack' in SOUNDS: SOUNDS['attack'].set_volume(master_vol)
+    if 'hit' in SOUNDS: SOUNDS['hit'].set_volume(master_vol)
+    if 'dash' in SOUNDS: SOUNDS['dash'].set_volume(master_vol)
+    if 'interact' in SOUNDS: SOUNDS['interact'].set_volume(master_vol)
+    
+    # 💡 추후에 배경음악 사운드를 로드하게 되면 아래처럼 설정하시면 됩니다!
+    # if 'bgm' in SOUNDS: SOUNDS['bgm'].set_volume(master_vol * bgm_vol)
 
 # ==================== 이펙트 클래스 ====================
 
@@ -501,6 +539,10 @@ class Player:
 
         if keys[config['keys']['DASH']] and self.dash_cooldown_left <= 0 and direction.length() > 0 and self.move_lock_timer <= 0 and not self.is_dashing:
             self.is_dashing = True
+            
+            if 'dash' in SOUNDS: 
+                SOUNDS['dash'].play()
+                
             self.dash_time_left = self.dash_duration
             self.dash_cooldown_left = self.dash_cooldown
             self.speed = self.dash_speed
@@ -708,12 +750,13 @@ def main():
     screen.fill((20, 20, 25))
     try:
         loading_font = get_korean_font(40, bold=True)
-        text = loading_font.render("이미지 데이터를 불러오는 중입니다...", True, (255, 255, 255))
+        text = loading_font.render("로딩 중입니다...", True, (255, 255, 255))
         screen.blit(text, (current_width // 2 - text.get_width() // 2, current_height // 2))
     except: pass
     pygame.display.flip()
     
     load_images()
+    load_sounds()
     
     app_state = APP_MAIN_MENU 
     current_map_idx = -1 
@@ -764,7 +807,9 @@ def main():
     btn_fullscreen = Button(0, 470, 320, 60, "독점 전체화면")
     
     btn_vol_down = Button(-100, 310, 60, 60, "-", 40); btn_vol_up = Button(100, 310, 60, 60, "+", 40)
-    btn_combat_vol_down = Button(-100, 440, 60, 60, "-", 40); btn_combat_vol_up = Button(100, 440, 60, 60, "+", 40)
+    
+    # 👇 [UI 변경] 전투 볼륨 버튼들을 배경 볼륨(BGM) 버튼들로 교체했습니다.
+    btn_bgm_vol_down = Button(-100, 440, 60, 60, "-", 40); btn_bgm_vol_up = Button(100, 440, 60, 60, "+", 40)
     btn_voice_vol_down = Button(-100, 570, 60, 60, "-", 40); btn_voice_vol_up = Button(100, 570, 60, 60, "+", 40)
     
     key_buttons = {
@@ -832,11 +877,13 @@ def main():
                                 
                                 if NAYE_HOME_MAP[r][c] == 2: 
                                     if pygame.math.Vector2(tc_x, tc_y).distance_to(player.pos) < 55:
+                                        if 'interact' in SOUNDS: SOUNDS['interact'].play()
                                         current_overlay = 'SAVE'
                                         break
                                 
                                 elif NAYE_HOME_MAP[r][c] == 3:
                                     if pygame.math.Vector2(tc_x, tc_y).distance_to(player.pos) < 55:
+                                        if 'interact' in SOUNDS: SOUNDS['interact'].play()
                                         NAYE_HOME_MAP[r][c] = 0           
                                         player.has_bag = True
                                         popup_msg = "가방을 획득했습니다! (인벤토리 개방)"
@@ -874,14 +921,28 @@ def main():
                             txt1 = font.render(f"마스터 볼륨: {config['volume']}%", True, (255, 255, 255))
                             display_surface.blit(txt1, (center_x - txt1.get_width()//2, 275))
                             btn_vol_down.draw(display_surface, center_x, scaled_mouse_pos); btn_vol_up.draw(display_surface, center_x, scaled_mouse_pos)
+                            if btn_vol_down.is_clicked(event, scaled_mouse_pos): 
+                                config['volume'] = max(0, config['volume'] - 10); update_sound_volumes()
+                            if btn_vol_up.is_clicked(event, scaled_mouse_pos): 
+                                config['volume'] = min(100, config['volume'] + 10); update_sound_volumes()
                             
-                            txt2 = font.render(f"전투 볼륨: {config['combat_volume']}%", True, (255, 255, 255))
+                            # 👇 [UI 변경] 전투 볼륨을 배경 볼륨으로 표시하고 로직을 수정했습니다.
+                            txt2 = font.render(f"배경 볼륨: {config.get('bgm_volume', 50)}%", True, (255, 255, 255))
                             display_surface.blit(txt2, (center_x - txt2.get_width()//2, 405))
-                            btn_combat_vol_down.draw(display_surface, center_x, scaled_mouse_pos); btn_combat_vol_up.draw(display_surface, center_x, scaled_mouse_pos)
+                            btn_bgm_vol_down.draw(display_surface, center_x, scaled_mouse_pos); btn_bgm_vol_up.draw(display_surface, center_x, scaled_mouse_pos)
+                            if btn_bgm_vol_down.is_clicked(event, scaled_mouse_pos): 
+                                config['bgm_volume'] = max(0, config.get('bgm_volume', 50) - 10); update_sound_volumes()
+                            if btn_bgm_vol_up.is_clicked(event, scaled_mouse_pos): 
+                                config['bgm_volume'] = min(100, config.get('bgm_volume', 50) + 10); update_sound_volumes()
                             
                             txt3 = font.render(f"음성 볼륨: {config['voice_volume']}%", True, (255, 255, 255))
                             display_surface.blit(txt3, (center_x - txt3.get_width()//2, 535))
                             btn_voice_vol_down.draw(display_surface, center_x, scaled_mouse_pos); btn_voice_vol_up.draw(display_surface, center_x, scaled_mouse_pos)
+                            if btn_voice_vol_down.is_clicked(event, scaled_mouse_pos): 
+                                config['voice_volume'] = max(0, config['voice_volume'] - 10)
+                            if btn_voice_vol_up.is_clicked(event, scaled_mouse_pos): 
+                                config['voice_volume'] = min(100, config['voice_volume'] + 10)
+                                
                         elif current_tab == "KEYS":
                             for action, btn in key_buttons.items():
                                 if btn.is_clicked(event, scaled_mouse_pos): waiting_for_key = action
@@ -983,6 +1044,8 @@ def main():
                         else: player.facing = 'down' if dy > 0 else 'up'
                         
                         if player.trigger_attack():
+                            if 'attack' in SOUNDS: SOUNDS['attack'].play()
+                            
                             offset_x = 45
                             offset_y = 60
                             hx, hy = player.pos.x, player.pos.y
@@ -995,8 +1058,11 @@ def main():
                             hitbox_pos = pygame.math.Vector2(hx, hy)
                             hitbox_radius = 90 
                             
+                            hit_something = False 
+                            
                             for enemy in enemies[:]:
                                 if hitbox_pos.distance_to(enemy.pos) < hitbox_radius + enemy.radius:
+                                    hit_something = True
                                     individual_dmg = random.randint(20, 25) if player.attack_step == 2 else random.randint(15, 19)
                                     enemy.hp -= individual_dmg
                                     
@@ -1026,6 +1092,7 @@ def main():
                                                 hit_4_tiles.append((tc_x, tc_y))
                                 
                                 if hit_4_tiles:
+                                    hit_something = True
                                     avg_x = sum(t[0] for t in hit_4_tiles) / len(hit_4_tiles)
                                     min_y = min(t[1] for t in hit_4_tiles) - TILE_SIZE / 2
                                     sandbag_dmg = random.randint(20, 25) if player.attack_step == 2 else random.randint(15, 19)
@@ -1035,6 +1102,9 @@ def main():
                                     
                                     for _ in range(random.randint(15, 25)):
                                         particles.append(Particle(avg_x, min_y + TILE_SIZE//2))
+
+                            if hit_something and 'hit' in SOUNDS:
+                                SOUNDS['hit'].play()
 
         # ==================== 게임 로직 처리 ====================
         if not current_overlay and app_state == APP_PLAYING:
@@ -1343,7 +1413,6 @@ def main():
                 popup_timer -= dt
                 popup_surf = mini_font.render(popup_msg, True, (255, 200, 200))
                 draw_px = int(player.pos.x - camera_x) + VIEW_MARGIN_X
-                # 👇 캐릭터 머리와 더 가깝게 Y축 오프셋을 -105에서 -55로 수정했습니다!
                 draw_py = int(player.pos.y - camera_y) + VIEW_MARGIN_Y - 55 
                 
                 bg_rect = popup_surf.get_rect(center=(draw_px, draw_py))
@@ -1489,9 +1558,9 @@ def main():
                     display_surface.blit(txt1, (center_x - txt1.get_width()//2, 275))
                     btn_vol_down.draw(display_surface, center_x, scaled_mouse_pos); btn_vol_up.draw(display_surface, center_x, scaled_mouse_pos)
                     
-                    txt2 = font.render(f"전투 볼륨: {config['combat_volume']}%", True, (255, 255, 255))
+                    txt2 = font.render(f"배경 볼륨: {config.get('bgm_volume', 50)}%", True, (255, 255, 255))
                     display_surface.blit(txt2, (center_x - txt2.get_width()//2, 405))
-                    btn_combat_vol_down.draw(display_surface, center_x, scaled_mouse_pos); btn_combat_vol_up.draw(display_surface, center_x, scaled_mouse_pos)
+                    btn_bgm_vol_down.draw(display_surface, center_x, scaled_mouse_pos); btn_bgm_vol_up.draw(display_surface, center_x, scaled_mouse_pos)
                     
                     txt3 = font.render(f"음성 볼륨: {config['voice_volume']}%", True, (255, 255, 255))
                     display_surface.blit(txt3, (center_x - txt3.get_width()//2, 535))
