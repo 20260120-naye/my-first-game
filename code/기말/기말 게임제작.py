@@ -1021,7 +1021,7 @@ def main():
                                 tc_x = c * TILE_SIZE + TILE_SIZE / 2
                                 tc_y = r * TILE_SIZE + TILE_SIZE / 2
                                 
-                                if target_map[r][c] == 3: 
+                                if target_map[r][c] == 2: 
                                     if pygame.math.Vector2(tc_x, tc_y).distance_to(player.pos) < 55:
                                         if 'interact' in SOUNDS: SOUNDS['interact'].play()
                                         current_overlay = 'SAVE'
@@ -1460,7 +1460,7 @@ def main():
                     end_row = min(len(target_map), int((camera_y + VIEW_H) // TILE_SIZE) + 1)
                     for row_idx in range(start_row, end_row):
                         for col_idx in range(start_col, end_col):
-                            if target_map[row_idx][col_idx] == 3:
+                            if target_map[row_idx][col_idx] == 2:
                                 x = col_idx * TILE_SIZE - camera_x
                                 y = row_idx * TILE_SIZE - camera_y
                                 floating_offset = math.sin(pygame.time.get_ticks() * 0.005) * 3
@@ -1582,7 +1582,7 @@ def main():
                     target_map = CLASSROOM_MAP if current_map_idx == 0 else TOILET_MAP
                     for r in range(max(0, p_row-1), min(len(target_map), p_row+2)):
                         for c in range(max(0, p_col-1), min(len(target_map[0]), p_col+2)):
-                            if target_map[r][c] == 3: 
+                            if target_map[r][c] == 2: 
                                 tc_x = c * TILE_SIZE + TILE_SIZE / 2
                                 tc_y = r * TILE_SIZE + TILE_SIZE / 2
                                 if pygame.math.Vector2(tc_x, tc_y).distance_to(player.pos) < 55:
