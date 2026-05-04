@@ -8,7 +8,7 @@ import random
 
 # Pygame 및 Mixer 초기화
 pygame.init()
-pygame.mixer.init() # 사운드를 위한 Mixer 초기화
+pygame.mixer.init() # 사운드 및 BGM을 위한 Mixer 초기화
 
 # ==================== 한글 폰트 자동 탐색 함수 ====================
 _cached_fonts = {}
@@ -55,7 +55,7 @@ ENEMY_COLOR = (255, 60, 60); BOSS_COLOR = (200, 50, 255)
 DOOR_OPEN_COLOR = (100, 255, 100); DOOR_LOCKED_COLOR = (150, 50, 50)
 
 ROOM_WAITING = 0; ROOM_COMBAT = 1; ROOM_CLEARED = 2
-APP_MAIN_MENU = 0; APP_PLAYING = 1
+APP_MAIN_MENU = 0; APP_STORY = 1; APP_PLAYING = 2
 
 TILE_SIZE = 32 
 
@@ -221,7 +221,6 @@ def load_images():
 
 # ==================== 설정(Config) 및 세이브 ====================
 CONFIG_FILE = "settings.json"
-# 👇 [수정] combat_volume을 삭제하고 bgm_volume을 추가했습니다.
 config = {
     'display_mode': 'WINDOW', 'volume': 50, 'bgm_volume': 50, 'voice_volume': 50,
     'keys': {
@@ -286,8 +285,9 @@ class Button:
         return event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.rect.collidepoint(scaled_mouse_pos)
 
 
-# ==================== 사운드 자원 관리 ====================
+# ==================== 사운드 및 BGM 자원 관리 ====================
 SOUNDS = {}
+CURRENT_BGM = None  
 
 def load_sounds():
     def load_snd(name, filename):
@@ -297,8 +297,6 @@ def load_sounds():
                 SOUNDS[name] = pygame.mixer.Sound(path)
             except Exception as e:
                 print(f"[경고] 사운드 로딩 실패 ({filename}): {e}")
-        else:
-            print(f"[알림] 사운드 파일이 없습니다: {path}")
 
     load_snd('attack', '칼공격.mp3')
     load_snd('hit', '칼피격.mp3')
@@ -308,18 +306,38 @@ def load_sounds():
     update_sound_volumes()
 
 def update_sound_volumes():
-    # 👇 [핵심 변경] 전투 볼륨을 삭제하고 모든 효과음을 마스터 볼륨에 통합했습니다.
     master_vol = config.get('volume', 50) / 100.0
-    bgm_vol = config.get('bgm_volume', 50) / 100.0 # 추후 추가될 BGM을 위한 변수
+    bgm_vol = config.get('bgm_volume', 50) / 100.0 
     
-    # 효과음은 모두 마스터 볼륨의 크기를 그대로 따릅니다.
     if 'attack' in SOUNDS: SOUNDS['attack'].set_volume(master_vol)
     if 'hit' in SOUNDS: SOUNDS['hit'].set_volume(master_vol)
     if 'dash' in SOUNDS: SOUNDS['dash'].set_volume(master_vol)
     if 'interact' in SOUNDS: SOUNDS['interact'].set_volume(master_vol)
     
-    # 💡 추후에 배경음악 사운드를 로드하게 되면 아래처럼 설정하시면 됩니다!
-    # if 'bgm' in SOUNDS: SOUNDS['bgm'].set_volume(master_vol * bgm_vol)
+    pygame.mixer.music.set_volume(master_vol * bgm_vol)
+
+def play_bgm(bgm_key):
+    global CURRENT_BGM
+    if CURRENT_BGM == bgm_key:
+        return
+        
+    CURRENT_BGM = bgm_key
+    update_sound_volumes() 
+    
+    if bgm_key == 'title':
+        path = "./code/기말/assets/sound/시작배경.mp3"
+    elif bgm_key == 'game':
+        path = "./code/기말/assets/sound/게임배경.mp3"
+    else:
+        pygame.mixer.music.stop()
+        return
+
+    if os.path.exists(path):
+        try:
+            pygame.mixer.music.load(path)
+            pygame.mixer.music.play(-1) 
+        except Exception as e:
+            print(f"[경고] BGM 재생 실패 ({path}): {e}")
 
 # ==================== 이펙트 클래스 ====================
 
@@ -807,8 +825,6 @@ def main():
     btn_fullscreen = Button(0, 470, 320, 60, "독점 전체화면")
     
     btn_vol_down = Button(-100, 310, 60, 60, "-", 40); btn_vol_up = Button(100, 310, 60, 60, "+", 40)
-    
-    # 👇 [UI 변경] 전투 볼륨 버튼들을 배경 볼륨(BGM) 버튼들로 교체했습니다.
     btn_bgm_vol_down = Button(-100, 440, 60, 60, "-", 40); btn_bgm_vol_up = Button(100, 440, 60, 60, "+", 40)
     btn_voice_vol_down = Button(-100, 570, 60, 60, "-", 40); btn_voice_vol_up = Button(100, 570, 60, 60, "+", 40)
     
@@ -836,11 +852,26 @@ def main():
     btn_confirm_yes_save = Button(-120, 450, 200, 70, "예 (저장)", base_col=(60, 150, 60))
     btn_confirm_no = Button(120, 450, 200, 70, "아니오", base_col=(80, 80, 90))
 
+    # 👇 [추가] 방에서 나갈 때 사용되는 버튼입니다. (초록색과 기본 회색 지정)
+    btn_leave_yes = Button(-120, 450, 200, 70, "가자!", base_col=(60, 150, 60), hover_col=(80, 180, 80))
+    btn_leave_no = Button(120, 450, 200, 70, "아직이야..", base_col=(80, 80, 90), hover_col=(100, 100, 110))
+
     running = True
     while running:
         dt = clock.tick(60) / 1000.0
         scaled_mouse_pos = get_scaled_mouse_pos()
         center_x = LOGICAL_WIDTH // 2
+
+        # 👇 [BGM 로직 수정] 나예 방(-1)에서는 BGM 없이, 밖으로 나가야 게임배경 재생
+        if app_state == APP_MAIN_MENU:
+            play_bgm('title')
+        elif app_state == APP_STORY:
+            play_bgm(None) 
+        elif app_state == APP_PLAYING:
+            if current_map_idx == -1:
+                play_bgm(None) # 나예의 방: 적막
+            else:
+                play_bgm('game') # 밖으로 나감: 웅장한 게임 BGM 시작!
 
         for i in range(3):
             slot_key = f"slot_{i+1}"
@@ -918,26 +949,16 @@ def main():
                             if btn_borderless.is_clicked(event, scaled_mouse_pos): update_display('BORDERLESS')
                             if btn_fullscreen.is_clicked(event, scaled_mouse_pos): update_display('FULLSCREEN')
                         elif current_tab == "AUDIO":
-                            txt1 = font.render(f"마스터 볼륨: {config['volume']}%", True, (255, 255, 255))
-                            display_surface.blit(txt1, (center_x - txt1.get_width()//2, 275))
-                            btn_vol_down.draw(display_surface, center_x, scaled_mouse_pos); btn_vol_up.draw(display_surface, center_x, scaled_mouse_pos)
                             if btn_vol_down.is_clicked(event, scaled_mouse_pos): 
                                 config['volume'] = max(0, config['volume'] - 10); update_sound_volumes()
                             if btn_vol_up.is_clicked(event, scaled_mouse_pos): 
                                 config['volume'] = min(100, config['volume'] + 10); update_sound_volumes()
                             
-                            # 👇 [UI 변경] 전투 볼륨을 배경 볼륨으로 표시하고 로직을 수정했습니다.
-                            txt2 = font.render(f"배경 볼륨: {config.get('bgm_volume', 50)}%", True, (255, 255, 255))
-                            display_surface.blit(txt2, (center_x - txt2.get_width()//2, 405))
-                            btn_bgm_vol_down.draw(display_surface, center_x, scaled_mouse_pos); btn_bgm_vol_up.draw(display_surface, center_x, scaled_mouse_pos)
                             if btn_bgm_vol_down.is_clicked(event, scaled_mouse_pos): 
                                 config['bgm_volume'] = max(0, config.get('bgm_volume', 50) - 10); update_sound_volumes()
                             if btn_bgm_vol_up.is_clicked(event, scaled_mouse_pos): 
                                 config['bgm_volume'] = min(100, config.get('bgm_volume', 50) + 10); update_sound_volumes()
                             
-                            txt3 = font.render(f"음성 볼륨: {config['voice_volume']}%", True, (255, 255, 255))
-                            display_surface.blit(txt3, (center_x - txt3.get_width()//2, 535))
-                            btn_voice_vol_down.draw(display_surface, center_x, scaled_mouse_pos); btn_voice_vol_up.draw(display_surface, center_x, scaled_mouse_pos)
                             if btn_voice_vol_down.is_clicked(event, scaled_mouse_pos): 
                                 config['voice_volume'] = max(0, config['voice_volume'] - 10)
                             if btn_voice_vol_up.is_clicked(event, scaled_mouse_pos): 
@@ -1009,6 +1030,26 @@ def main():
                                         enemies.append(en)
                                         
                                     bullets.clear(); damage_texts.clear(); slash_effects.clear(); particles.clear(); app_state = APP_PLAYING; current_overlay = None; break
+
+                # 👇 [새로운 시스템] 방을 나갈 때 확인 버튼 클릭 로직
+                elif current_overlay == 'LEAVE_HOME':
+                    if btn_leave_yes.is_clicked(event, scaled_mouse_pos):
+                        current_map_idx = 0
+                        cols, rows = MAP_DATA[current_map_idx]['cols'], MAP_DATA[current_map_idx]['rows']
+                        room_w, room_h = cols * TILE_SIZE, rows * TILE_SIZE
+                        
+                        player.pos.x, player.pos.y = 90, room_h // 2
+                        room_state = ROOM_CLEARED if cleared_rooms[current_map_idx] else ROOM_WAITING
+                        
+                        bullets.clear()
+                        enemies.clear()
+                        damage_texts.clear()
+                        slash_effects.clear() 
+                        particles.clear()
+                        
+                        current_overlay = None
+                    elif btn_leave_no.is_clicked(event, scaled_mouse_pos):
+                        current_overlay = None
 
             elif app_state == APP_MAIN_MENU:
                 if menu_btn_start.is_clicked(event, scaled_mouse_pos):
@@ -1205,12 +1246,9 @@ def main():
                 if current_map_idx == -1:
                     if (room_w//2 - 100 < player.pos.x < room_w//2 + 100) and player.pos.y > room_h - 45:
                         if player.has_bag:
-                            current_map_idx = 0
-                            cols, rows = MAP_DATA[0]['cols'], MAP_DATA[0]['rows']
-                            room_w, room_h = cols * TILE_SIZE, rows * TILE_SIZE
-                            
-                            player.pos.x, player.pos.y = 90, room_h // 2
-                            transitioned = True
+                            # 👇 [새로운 시스템] 방을 나갈 때 확인 팝업을 띄우고 뒤로 물러납니다.
+                            current_overlay = 'LEAVE_HOME'
+                            player.pos.y = room_h - 60 
                         else:
                             popup_msg = "가방을 깜빡했어!"
                             popup_timer = 2.0
@@ -1576,15 +1614,19 @@ def main():
                     display_surface.blit(l1, (center_x - l1.get_width()//2, 290)); display_surface.blit(l2, (center_x - l2.get_width()//2, 350))
                     btn_confirm_yes_save.draw(display_surface, center_x, scaled_mouse_pos); btn_confirm_no.draw(display_surface, center_x, scaled_mouse_pos)
                 else:
-                    if btn_close_overlay.is_clicked(event, scaled_mouse_pos): 
-                        current_overlay = None
-                    else:
-                        ts = large_font.render("진행상황 저장" if current_overlay == 'SAVE' else "게임 불러오기", True, (255, 255, 255))
-                        display_surface.blit(ts, (center_x - ts.get_width()//2, 170))
-                        for i in range(3): 
-                            slot_buttons[i].draw(display_surface, center_x, scaled_mouse_pos)
-                            if saves_data[f"slot_{i+1}"]: delete_buttons[i].draw(display_surface, center_x, scaled_mouse_pos)
-                        btn_close_overlay.draw(display_surface, center_x, scaled_mouse_pos)
+                    ts = large_font.render("진행상황 저장" if current_overlay == 'SAVE' else "게임 불러오기", True, (255, 255, 255))
+                    display_surface.blit(ts, (center_x - ts.get_width()//2, 170))
+                    for i in range(3): 
+                        slot_buttons[i].draw(display_surface, center_x, scaled_mouse_pos)
+                        if saves_data[f"slot_{i+1}"]: delete_buttons[i].draw(display_surface, center_x, scaled_mouse_pos)
+                    btn_close_overlay.draw(display_surface, center_x, scaled_mouse_pos)
+
+            # 👇 [추가] 학교로 가기 전의 확인 팝업 화면입니다.
+            elif current_overlay == 'LEAVE_HOME':
+                l1 = large_font.render("학교로 가시겠습니까?", True, (255, 255, 255))
+                display_surface.blit(l1, (center_x - l1.get_width()//2, 350))
+                btn_leave_yes.draw(display_surface, center_x, scaled_mouse_pos)
+                btn_leave_no.draw(display_surface, center_x, scaled_mouse_pos)
 
         if 'cursor_normal' in IMAGES and 'cursor_click' in IMAGES:
             pygame.mouse.set_visible(False)
