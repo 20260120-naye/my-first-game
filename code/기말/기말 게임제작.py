@@ -132,7 +132,7 @@ layer_files_toilet = [
 ]
 TOILET_MAP = load_tiled_map(layer_files_toilet, MAP_DATA[1]['cols'], MAP_DATA[1]['rows'])
 
-# 👇 보건실 맵 로드 추가
+# 보건실 맵 로드
 layer_files_health = [
     "./code/기말/assets/school_health office/보건실_충돌_수정.csv",
     "./code/기말/assets/school_health office/보건실_충돌.csv"
@@ -164,7 +164,6 @@ def load_images():
         IMAGES['toilet_bg'] = pygame.transform.scale(toilet_bg_img, (MAP_DATA[1]['cols'] * TILE_SIZE, MAP_DATA[1]['rows'] * TILE_SIZE))
     except: pass
 
-    # 👇 보건실 배경 이미지 로드 추가
     try:
         health_bg_img = pygame.image.load("./code/기말/assets/school_health office/학교_보건실.png").convert_alpha()
         IMAGES['health_bg'] = pygame.transform.scale(health_bg_img, (MAP_DATA[2]['cols'] * TILE_SIZE, MAP_DATA[2]['rows'] * TILE_SIZE))
@@ -836,13 +835,40 @@ class Enemy:
             self.speed, self.radius, self.hp, self.max_hp = 200, 14, 100, 100 
             self.color = ENEMY_COLOR
             
-    def update(self, dt, target_pos):
+    # 👇 몬스터도 타일 맵(current_tile_map)을 받아 벽과 저장 포인트를 통과하지 못하게 업데이트
+    def update(self, dt, target_pos, tile_map=None):
         if self.flash_timer > 0:
             self.flash_timer -= dt
             
         direction = target_pos - self.pos
         if direction.length() > 0: direction = direction.normalize()
-        self.pos += direction * self.speed * dt
+        
+        move_x = direction.x * self.speed * dt
+        move_y = direction.y * self.speed * dt
+        
+        can_move_x, can_move_y = True, True
+        
+        if tile_map:
+            blocked_tiles = [1, 2] # 1(벽/장애물), 2(저장 포인트) 통과 불가
+            
+            # X축 충돌 검사
+            check_x = self.pos.x + move_x + (self.radius if move_x > 0 else -self.radius)
+            c_x = int(check_x // TILE_SIZE)
+            r_cur = int(self.pos.y // TILE_SIZE)
+            if move_x != 0 and 0 <= c_x < len(tile_map[0]) and 0 <= r_cur < len(tile_map):
+                if tile_map[r_cur][c_x] in blocked_tiles: 
+                    can_move_x = False
+
+            # Y축 충돌 검사
+            check_y = self.pos.y + move_y + (self.radius if move_y > 0 else -self.radius)
+            c_y = int(check_y // TILE_SIZE)
+            c_cur = int(self.pos.x // TILE_SIZE)
+            if move_y != 0 and 0 <= c_y < len(tile_map) and 0 <= c_cur < len(tile_map[0]):
+                if tile_map[c_y][c_cur] in blocked_tiles: 
+                    can_move_y = False
+
+        if can_move_x: self.pos.x += move_x
+        if can_move_y: self.pos.y += move_y
         
     def draw(self, surface, cam_x, cam_y):
         draw_x, draw_y = int(self.pos.x - cam_x), int(self.pos.y - cam_y)
@@ -1353,7 +1379,8 @@ def main():
                         spawners.append(MonsterSpawn(sx, sy, is_boss=is_boss))
                         
             elif room_state == ROOM_COMBAT:
-                for enemy in enemies: enemy.update(dt, player.pos)
+                # 👇 몬스터도 현재 맵(current_tile_map)을 전달받아 벽을 통과하지 못하게 수정됨
+                for enemy in enemies: enemy.update(dt, player.pos, current_tile_map)
                 for bullet in bullets[:]:
                     bullet.update(dt)
                     if not (0 <= bullet.pos.x <= room_w and 0 <= bullet.pos.y <= room_h):
@@ -1472,7 +1499,7 @@ def main():
             pygame.draw.rect(view_surface, ROOM_COLOR, (-camera_x, -camera_y, room_w, room_h))
             
             if current_map_idx >= 0:
-                # 👇 교실(0), 화장실(1), 보건실(2) 맵 렌더링 통합 처리
+                # 교실(0), 화장실(1), 보건실(2) 맵 렌더링 통합 처리
                 if current_map_idx == 0 and 'class_bg' in IMAGES:
                     view_surface.blit(IMAGES['class_bg'], (-camera_x, -camera_y))
                 elif current_map_idx == 1 and 'toilet_bg' in IMAGES:
@@ -1533,7 +1560,7 @@ def main():
                     elif dy == 1: doors_to_draw.append('BOTTOM')
                     elif dy == -1: doors_to_draw.append('TOP')
                     
-                # 👇 교실, 화장실, 보건실은 기본 초록색 문을 그리지 않습니다.
+                # 교실, 화장실, 보건실은 기본 초록색 문을 그리지 않습니다.
                 if current_map_idx not in [0, 1, 2]:
                     for d in doors_to_draw:
                         if d == 'TOP':
@@ -1610,7 +1637,7 @@ def main():
                                 if pygame.math.Vector2(tc_x, tc_y).distance_to(player.pos) < 55:
                                     is_near_interact = True
                                     break
-                # 👇 교실, 화장실, 보건실의 상호작용 텍스트 로직 통합
+                # 교실, 화장실, 보건실의 상호작용 텍스트 로직 통합
                 elif current_map_idx in [0, 1, 2]: 
                     if current_map_idx == 0: target_map = CLASSROOM_MAP
                     elif current_map_idx == 1: target_map = TOILET_MAP
@@ -1750,6 +1777,7 @@ def main():
             overlay_bg = pygame.Surface((LOGICAL_WIDTH, LOGICAL_HEIGHT), pygame.SRCALPHA)
             overlay_bg.fill((0, 0, 0, 180)); display_surface.blit(overlay_bg, (0, 0))
             
+            # 모든 오버레이에 창(회색 테두리 상자)이 그려지도록 적용
             pygame.draw.rect(display_surface, (40, 40, 45), (center_x - 350, 150, 700, 600), border_radius=15)
             pygame.draw.rect(display_surface, (200, 200, 200), (center_x - 350, 150, 700, 600), 3, border_radius=15)
 
