@@ -59,6 +59,7 @@ APP_MAIN_MENU = 0; APP_STORY = 1; APP_PLAYING = 2
 
 TILE_SIZE = 32 
 
+# 교실(30x28), 화장실(30x20), 보건실(20x30) 크기 반영
 MAP_DATA = [
     {"name": "교실", "cols": 30, "rows": 28},
     {"name": "화장실", "cols": 30, "rows": 20}, 
@@ -113,20 +114,30 @@ def load_tiled_map(filepaths, default_cols=26, default_rows=15):
 
     return combined_map
 
+# 나예 방 맵 로드
 layer_files_home = ["./code/기말/assets/naye_home/나예집_충돌.csv"]
 NAYE_HOME_MAP = load_tiled_map(layer_files_home, 26, 15)
 
+# 교실 맵 로드
 layer_files_class = [
-    "./code/기말/assets/school_class/교실_충돌_수정.csv", 
+    "./code/기말/assets/school_class/교실__충돌_최종수정.csv", 
     "./code/기말/assets/school_class/교실_충돌.csv"
 ]
 CLASSROOM_MAP = load_tiled_map(layer_files_class, MAP_DATA[0]['cols'], MAP_DATA[0]['rows'])
 
+# 화장실 맵 로드
 layer_files_toilet = [
-    "./code/기말/assets/school_toilet/화장실_충돌_수정.csv", 
+    "./code/기말/assets/school_toilet/화장실_충돌_4_수정.csv", 
     "./code/기말/assets/school_toilet/화장실_충돌.csv"
 ]
 TOILET_MAP = load_tiled_map(layer_files_toilet, MAP_DATA[1]['cols'], MAP_DATA[1]['rows'])
+
+# 👇 보건실 맵 로드 추가
+layer_files_health = [
+    "./code/기말/assets/school_health office/보건실_충돌_수정.csv",
+    "./code/기말/assets/school_health office/보건실_충돌.csv"
+]
+HEALTH_MAP = load_tiled_map(layer_files_health, MAP_DATA[2]['cols'], MAP_DATA[2]['rows'])
 
 # ==================== 이미지 자원 관리 ====================
 IMAGES = {}
@@ -151,6 +162,12 @@ def load_images():
     try:
         toilet_bg_img = pygame.image.load("./code/기말/assets/school_toilet/학교_화장실.png").convert_alpha()
         IMAGES['toilet_bg'] = pygame.transform.scale(toilet_bg_img, (MAP_DATA[1]['cols'] * TILE_SIZE, MAP_DATA[1]['rows'] * TILE_SIZE))
+    except: pass
+
+    # 👇 보건실 배경 이미지 로드 추가
+    try:
+        health_bg_img = pygame.image.load("./code/기말/assets/school_health office/학교_보건실.png").convert_alpha()
+        IMAGES['health_bg'] = pygame.transform.scale(health_bg_img, (MAP_DATA[2]['cols'] * TILE_SIZE, MAP_DATA[2]['rows'] * TILE_SIZE))
     except: pass
 
     try:
@@ -853,7 +870,7 @@ def update_display(mode):
     current_width, current_height = screen.get_width(), screen.get_height()
 
 def main():
-    global current_width, current_height, screen, NAYE_HOME_MAP, CLASSROOM_MAP, TOILET_MAP
+    global current_width, current_height, screen, NAYE_HOME_MAP, CLASSROOM_MAP, TOILET_MAP, HEALTH_MAP
     
     load_config()
     update_display(config['display_mode'])
@@ -1014,8 +1031,12 @@ def main():
                                         popup_timer = 2.5       
                                         break
                                         
-                    elif current_map_idx in [0, 1]:
-                        target_map = CLASSROOM_MAP if current_map_idx == 0 else TOILET_MAP
+                    # 👇 교실 맵(0), 화장실 맵(1), 보건실 맵(2) 통합 상호작용
+                    elif current_map_idx in [0, 1, 2]:
+                        if current_map_idx == 0: target_map = CLASSROOM_MAP
+                        elif current_map_idx == 1: target_map = TOILET_MAP
+                        else: target_map = HEALTH_MAP
+                        
                         for r in range(max(0, p_row-1), min(len(target_map), p_row+2)):
                             for c in range(max(0, p_col-1), min(len(target_map[0]), p_col+2)):
                                 tc_x = c * TILE_SIZE + TILE_SIZE / 2
@@ -1230,6 +1251,8 @@ def main():
                                 current_tile_map = CLASSROOM_MAP
                             elif current_map_idx == 1:
                                 current_tile_map = TOILET_MAP
+                            elif current_map_idx == 2:
+                                current_tile_map = HEALTH_MAP
 
                             if current_tile_map:
                                 hit_4_tiles = []
@@ -1274,6 +1297,8 @@ def main():
                 current_tile_map = CLASSROOM_MAP
             elif current_map_idx == 1:
                 current_tile_map = TOILET_MAP
+            elif current_map_idx == 2:
+                current_tile_map = HEALTH_MAP
                 
             player.move(dt, room_w, room_h, world_mouse_x, world_mouse_y, current_map_idx, current_tile_map)
             current_play_time += dt
@@ -1447,13 +1472,19 @@ def main():
             pygame.draw.rect(view_surface, ROOM_COLOR, (-camera_x, -camera_y, room_w, room_h))
             
             if current_map_idx >= 0:
+                # 👇 교실(0), 화장실(1), 보건실(2) 맵 렌더링 통합 처리
                 if current_map_idx == 0 and 'class_bg' in IMAGES:
                     view_surface.blit(IMAGES['class_bg'], (-camera_x, -camera_y))
                 elif current_map_idx == 1 and 'toilet_bg' in IMAGES:
                     view_surface.blit(IMAGES['toilet_bg'], (-camera_x, -camera_y))
+                elif current_map_idx == 2 and 'health_bg' in IMAGES:
+                    view_surface.blit(IMAGES['health_bg'], (-camera_x, -camera_y))
                     
-                if current_map_idx in [0, 1]:
-                    target_map = CLASSROOM_MAP if current_map_idx == 0 else TOILET_MAP
+                if current_map_idx in [0, 1, 2]:
+                    if current_map_idx == 0: target_map = CLASSROOM_MAP
+                    elif current_map_idx == 1: target_map = TOILET_MAP
+                    else: target_map = HEALTH_MAP
+                    
                     start_col = max(0, int(camera_x // TILE_SIZE))
                     end_col = min(len(target_map[0]), int((camera_x + VIEW_W) // TILE_SIZE) + 1)
                     start_row = max(0, int(camera_y // TILE_SIZE))
@@ -1471,7 +1502,7 @@ def main():
                                 pygame.draw.polygon(view_surface, (255, 255, 100), [p1, p2, p3])
                                 pygame.draw.polygon(view_surface, (150, 150, 50), [p1, p2, p3], 1)
                                 
-                if current_map_idx not in [0, 1]:
+                if current_map_idx not in [0, 1, 2]:
                     for i in range(cols + 1):
                         x_pos = i * TILE_SIZE - camera_x
                         pygame.draw.line(view_surface, GRID_COLOR, (x_pos, -camera_y), (x_pos, room_h - camera_y), 1)
@@ -1502,7 +1533,8 @@ def main():
                     elif dy == 1: doors_to_draw.append('BOTTOM')
                     elif dy == -1: doors_to_draw.append('TOP')
                     
-                if current_map_idx not in [0, 1]:
+                # 👇 교실, 화장실, 보건실은 기본 초록색 문을 그리지 않습니다.
+                if current_map_idx not in [0, 1, 2]:
                     for d in doors_to_draw:
                         if d == 'TOP':
                             pygame.draw.rect(view_surface, door_color, (room_w//2 - door_half_w - camera_x, -camera_y, door_w, 30))
@@ -1578,8 +1610,12 @@ def main():
                                 if pygame.math.Vector2(tc_x, tc_y).distance_to(player.pos) < 55:
                                     is_near_interact = True
                                     break
-                elif current_map_idx in [0, 1]: 
-                    target_map = CLASSROOM_MAP if current_map_idx == 0 else TOILET_MAP
+                # 👇 교실, 화장실, 보건실의 상호작용 텍스트 로직 통합
+                elif current_map_idx in [0, 1, 2]: 
+                    if current_map_idx == 0: target_map = CLASSROOM_MAP
+                    elif current_map_idx == 1: target_map = TOILET_MAP
+                    else: target_map = HEALTH_MAP
+                    
                     for r in range(max(0, p_row-1), min(len(target_map), p_row+2)):
                         for c in range(max(0, p_col-1), min(len(target_map[0]), p_col+2)):
                             if target_map[r][c] == 2: 
@@ -1714,7 +1750,6 @@ def main():
             overlay_bg = pygame.Surface((LOGICAL_WIDTH, LOGICAL_HEIGHT), pygame.SRCALPHA)
             overlay_bg.fill((0, 0, 0, 180)); display_surface.blit(overlay_bg, (0, 0))
             
-            # 👇 핵심 수정 파트: 모든 오버레이에 창(회색 테두리 상자)이 그려지도록 복원했습니다!
             pygame.draw.rect(display_surface, (40, 40, 45), (center_x - 350, 150, 700, 600), border_radius=15)
             pygame.draw.rect(display_surface, (200, 200, 200), (center_x - 350, 150, 700, 600), 3, border_radius=15)
 
