@@ -5,6 +5,7 @@ import json
 import csv  # Tiled CSV 파일을 읽기 위한 모듈
 import math 
 import random 
+import heapq # 👈 몬스터의 똑똑한 A* 길찾기 알고리즘을 위한 모듈 추가
 
 # Pygame 및 Mixer 초기화
 pygame.init()
@@ -139,7 +140,7 @@ layer_files_health = [
 ]
 HEALTH_MAP = load_tiled_map(layer_files_health, MAP_DATA[2]['cols'], MAP_DATA[2]['rows'])
 
-# 👇 체육관 맵 로드 추가
+# 체육관 맵 로드 
 layer_files_gym = [
     "./code/기말/assets/school_gym/체육관_충돌_수정.csv",
     "./code/기말/assets/school_gym/체육관_충돌.csv"
@@ -177,7 +178,6 @@ def load_images():
         IMAGES['health_bg'] = pygame.transform.scale(health_bg_img, (MAP_DATA[2]['cols'] * TILE_SIZE, MAP_DATA[2]['rows'] * TILE_SIZE))
     except: pass
 
-    # 👇 체육관 배경 이미지 로드 추가
     try:
         gym_bg_img = pygame.image.load("./code/기말/assets/school_gym/학교_체육관.png").convert_alpha()
         IMAGES['gym_bg'] = pygame.transform.scale(gym_bg_img, (MAP_DATA[3]['cols'] * TILE_SIZE, MAP_DATA[3]['rows'] * TILE_SIZE))
@@ -504,7 +504,6 @@ class Particle:
             rect = pygame.Rect(0, 0, current_size, current_size)
             rect.center = (draw_x, draw_y)
             pygame.draw.rect(surface, self.color, rect)
-
 
 class DamageText:
     def __init__(self, x, y, amount):
@@ -836,11 +835,16 @@ class Bullet:
     def draw(self, surface, cam_x, cam_y):
         pygame.draw.circle(surface, BULLET_COLOR, (int(self.pos.x - cam_x), int(self.pos.y - cam_y)), self.radius)
 
+# 👇 A* 길찾기 알고리즘이 적용된 몬스터 클래스
 class Enemy:
     def __init__(self, x, y, is_boss=False):
         self.pos = pygame.math.Vector2(x, y)
         self.is_boss = is_boss
         self.flash_timer = 0.0
+        
+        # 길찾기 관련 변수
+        self.path = []
+        self.path_calc_timer = 0.0
         
         if is_boss:
             self.speed, self.radius, self.hp, self.max_hp = 120, 30, 500, 500 
@@ -848,21 +852,107 @@ class Enemy:
         else:
             self.speed, self.radius, self.hp, self.max_hp = 200, 14, 100, 100 
             self.color = ENEMY_COLOR
+
+    # 타일 맵 상에서 목표까지의 A* 최단 경로를 찾는 함수
+    def get_path(self, target_pos, tile_map):
+        start_c, start_r = int(self.pos.x // TILE_SIZE), int(self.pos.y // TILE_SIZE)
+        tgt_c, tgt_r = int(target_pos.x // TILE_SIZE), int(target_pos.y // TILE_SIZE)
+        
+        if start_c == tgt_c and start_r == tgt_r:
+            return []
             
+        open_set = []
+        heapq.heappush(open_set, (0, start_c, start_r))
+        came_from = {}
+        g_score = {(start_c, start_r): 0}
+        
+        # 한계를 두어 거리가 너무 멀면 게임이 멈추지 않도록 함 (최대 300번 탐색)
+        search_limit = 300 
+        
+        while open_set and search_limit > 0:
+            search_limit -= 1
+            _, curr_c, curr_r = heapq.heappop(open_set)
+            
+            if curr_c == tgt_c and curr_r == tgt_r:
+                path = []
+                while (curr_c, curr_r) in came_from:
+                    path.append((curr_c, curr_r))
+                    curr_c, curr_r = came_from[(curr_c, curr_r)]
+                path.reverse()
+                return path
+                
+            # 상하좌우 및 대각선 탐색
+            for dc, dr in [(0, -1), (0, 1), (-1, 0), (1, 0), (-1, -1), (1, -1), (-1, 1), (1, 1)]:
+                nc, nr = curr_c + dc, curr_r + dr
+                
+                if 0 <= nr < len(tile_map) and 0 <= nc < len(tile_map[0]):
+                    if tile_map[nr][nc] in [1, 2]: # 벽이나 저장 포인트는 못 감
+                        continue
+                    
+                    # 대각선으로 이동할 때 좁은 모서리 벽을 뚫고 지나가는 것 방지
+                    if dc != 0 and dr != 0:
+                        if tile_map[curr_r][nc] in [1, 2] or tile_map[nr][curr_c] in [1, 2]:
+                            continue
+                            
+                    # 대각선은 가중치 1.414, 직선은 1
+                    tentative_g = g_score[(curr_c, curr_r)] + (1.414 if dc != 0 and dr != 0 else 1)
+                    if (nc, nr) not in g_score or tentative_g < g_score[(nc, nr)]:
+                        came_from[(nc, nr)] = (curr_c, curr_r)
+                        g_score[(nc, nr)] = tentative_g
+                        # 남은 거리에 대한 휴리스틱(맨해튼 거리) 추가
+                        f_score = tentative_g + (abs(nc - tgt_c) + abs(nr - tgt_r))
+                        heapq.heappush(open_set, (f_score, nc, nr))
+        return []
+
     def update(self, dt, target_pos, tile_map=None):
         if self.flash_timer > 0:
             self.flash_timer -= dt
             
-        direction = target_pos - self.pos
-        if direction.length() > 0: direction = direction.normalize()
+        self.path_calc_timer -= dt
         
+        # 0.2초마다 경로를 다시 탐색하여 최신 플레이어 위치 갱신
+        if self.path_calc_timer <= 0:
+            self.path_calc_timer = 0.2
+            if tile_map:
+                self.path = self.get_path(target_pos, tile_map)
+            else:
+                self.path = []
+
+        direction = pygame.math.Vector2(0, 0)
+        
+        # 찾아놓은 경로가 있다면 그 길을 따라 이동
+        if self.path and len(self.path) > 0:
+            next_node = self.path[0]
+            # 타일의 정중앙을 향해 이동
+            target_x = next_node[0] * TILE_SIZE + TILE_SIZE / 2
+            target_y = next_node[1] * TILE_SIZE + TILE_SIZE / 2
+            node_target = pygame.math.Vector2(target_x, target_y)
+            
+            # 다음 목표 타일에 충분히 가까워지면 다음 타일로 넘어감
+            if self.pos.distance_to(node_target) < self.speed * dt * 2:
+                self.path.pop(0)
+                if not self.path: 
+                    direction = target_pos - self.pos
+                else:
+                    next_node = self.path[0]
+                    node_target = pygame.math.Vector2(next_node[0] * TILE_SIZE + TILE_SIZE / 2, next_node[1] * TILE_SIZE + TILE_SIZE / 2)
+                    direction = node_target - self.pos
+            else:
+                direction = node_target - self.pos
+        else:
+            # 경로를 못 찾았거나 경로가 끝나면 플레이어에게 직진
+            direction = target_pos - self.pos
+            
+        if direction.length() > 0: 
+            direction = direction.normalize()
+            
         move_x = direction.x * self.speed * dt
         move_y = direction.y * self.speed * dt
         
+        # 이동하려는 곳에 실제로 벽이 있는지 한 번 더 물리적 충돌 검사 (벽 파고듦 방지)
         can_move_x, can_move_y = True, True
-        
         if tile_map:
-            blocked_tiles = [1, 2] # 1(벽/장애물), 2(저장 포인트) 통과 불가
+            blocked_tiles = [1, 2]
             
             check_x = self.pos.x + move_x + (self.radius if move_x > 0 else -self.radius)
             c_x = int(check_x // TILE_SIZE)
@@ -1068,7 +1158,6 @@ def main():
                                         popup_timer = 2.5       
                                         break
                                         
-                    # 교실, 화장실, 보건실, 체육관 통합 상호작용
                     elif current_map_idx in [0, 1, 2, 3]:
                         if current_map_idx == 0: target_map = CLASSROOM_MAP
                         elif current_map_idx == 1: target_map = TOILET_MAP
@@ -1387,10 +1476,21 @@ def main():
                         is_boss = False
                         
                     for _ in range(spawn_count):
+                        sx, sy = 0, 0
                         for _ in range(50): 
                             sx = random.randint(TILE_SIZE * 2, room_w - TILE_SIZE * 2)
                             sy = random.randint(TILE_SIZE * 2, room_h - TILE_SIZE * 2)
-                            if pygame.math.Vector2(sx, sy).distance_to(player.pos) > 100:
+                            
+                            is_valid_spawn = True
+                            if current_tile_map:
+                                c_x, c_y = int(sx // TILE_SIZE), int(sy // TILE_SIZE)
+                                if 0 <= c_y < len(current_tile_map) and 0 <= c_x < len(current_tile_map[0]):
+                                    if current_tile_map[c_y][c_x] in [1, 2]:
+                                        is_valid_spawn = False
+                                else:
+                                    is_valid_spawn = False
+                                    
+                            if is_valid_spawn and pygame.math.Vector2(sx, sy).distance_to(player.pos) > 100:
                                 break
                         spawners.append(MonsterSpawn(sx, sy, is_boss=is_boss))
                         
@@ -1514,7 +1614,6 @@ def main():
             pygame.draw.rect(view_surface, ROOM_COLOR, (-camera_x, -camera_y, room_w, room_h))
             
             if current_map_idx >= 0:
-                # 👇 교실(0), 화장실(1), 보건실(2), 체육관(3) 맵 렌더링 통합 처리
                 if current_map_idx == 0 and 'class_bg' in IMAGES:
                     view_surface.blit(IMAGES['class_bg'], (-camera_x, -camera_y))
                 elif current_map_idx == 1 and 'toilet_bg' in IMAGES:
@@ -1578,7 +1677,6 @@ def main():
                     elif dy == 1: doors_to_draw.append('BOTTOM')
                     elif dy == -1: doors_to_draw.append('TOP')
                     
-                # 👇 교실, 화장실, 보건실, 체육관은 기본 초록색 문을 그리지 않습니다.
                 if current_map_idx not in [0, 1, 2, 3]:
                     for d in doors_to_draw:
                         if d == 'TOP':
@@ -1655,7 +1753,6 @@ def main():
                                 if pygame.math.Vector2(tc_x, tc_y).distance_to(player.pos) < 55:
                                     is_near_interact = True
                                     break
-                # 👇 교실, 화장실, 보건실, 체육관의 상호작용 텍스트 로직 통합
                 elif current_map_idx in [0, 1, 2, 3]: 
                     if current_map_idx == 0: target_map = CLASSROOM_MAP
                     elif current_map_idx == 1: target_map = TOILET_MAP
