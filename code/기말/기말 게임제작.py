@@ -5,7 +5,7 @@ import json
 import csv  # Tiled CSV 파일을 읽기 위한 모듈
 import math 
 import random 
-import heapq # 👈 몬스터의 똑똑한 A* 길찾기 알고리즘을 위한 모듈 추가
+import heapq # 몬스터의 똑똑한 A* 길찾기 알고리즘을 위한 모듈 추가
 
 # Pygame 및 Mixer 초기화
 pygame.init()
@@ -60,7 +60,7 @@ APP_MAIN_MENU = 0; APP_STORY = 1; APP_PLAYING = 2
 
 TILE_SIZE = 32 
 
-# 교실, 화장실, 보건실, 체육관 크기 반영
+# 교실, 화장실, 보건실, 체육관, 급식실 크기 반영
 MAP_DATA = [
     {"name": "교실", "cols": 30, "rows": 28},
     {"name": "화장실", "cols": 30, "rows": 20}, 
@@ -147,6 +147,13 @@ layer_files_gym = [
 ]
 GYM_MAP = load_tiled_map(layer_files_gym, MAP_DATA[3]['cols'], MAP_DATA[3]['rows'])
 
+# 👇 급식실 맵 로드 추가
+layer_files_cafeteria = [
+    "./code/기말/assets/school_cafeteria/급식실_충돌_수정.csv",
+    "./code/기말/assets/school_cafeteria/급식실_충돌.csv"
+]
+CAFETERIA_MAP = load_tiled_map(layer_files_cafeteria, MAP_DATA[4]['cols'], MAP_DATA[4]['rows'])
+
 
 # ==================== 이미지 자원 관리 ====================
 IMAGES = {}
@@ -181,6 +188,12 @@ def load_images():
     try:
         gym_bg_img = pygame.image.load("./code/기말/assets/school_gym/학교_체육관.png").convert_alpha()
         IMAGES['gym_bg'] = pygame.transform.scale(gym_bg_img, (MAP_DATA[3]['cols'] * TILE_SIZE, MAP_DATA[3]['rows'] * TILE_SIZE))
+    except: pass
+
+    # 👇 급식실 배경 이미지 로드 추가
+    try:
+        cafeteria_bg_img = pygame.image.load("./code/기말/assets/school_cafeteria/학교_급식실.png").convert_alpha()
+        IMAGES['cafeteria_bg'] = pygame.transform.scale(cafeteria_bg_img, (MAP_DATA[4]['cols'] * TILE_SIZE, MAP_DATA[4]['rows'] * TILE_SIZE))
     except: pass
 
     try:
@@ -504,6 +517,7 @@ class Particle:
             rect = pygame.Rect(0, 0, current_size, current_size)
             rect.center = (draw_x, draw_y)
             pygame.draw.rect(surface, self.color, rect)
+
 
 class DamageText:
     def __init__(self, x, y, amount):
@@ -835,14 +849,12 @@ class Bullet:
     def draw(self, surface, cam_x, cam_y):
         pygame.draw.circle(surface, BULLET_COLOR, (int(self.pos.x - cam_x), int(self.pos.y - cam_y)), self.radius)
 
-# 👇 A* 길찾기 알고리즘이 적용된 몬스터 클래스
 class Enemy:
     def __init__(self, x, y, is_boss=False):
         self.pos = pygame.math.Vector2(x, y)
         self.is_boss = is_boss
         self.flash_timer = 0.0
         
-        # 길찾기 관련 변수
         self.path = []
         self.path_calc_timer = 0.0
         
@@ -853,7 +865,6 @@ class Enemy:
             self.speed, self.radius, self.hp, self.max_hp = 200, 14, 100, 100 
             self.color = ENEMY_COLOR
 
-    # 타일 맵 상에서 목표까지의 A* 최단 경로를 찾는 함수
     def get_path(self, target_pos, tile_map):
         start_c, start_r = int(self.pos.x // TILE_SIZE), int(self.pos.y // TILE_SIZE)
         tgt_c, tgt_r = int(target_pos.x // TILE_SIZE), int(target_pos.y // TILE_SIZE)
@@ -866,7 +877,6 @@ class Enemy:
         came_from = {}
         g_score = {(start_c, start_r): 0}
         
-        # 한계를 두어 거리가 너무 멀면 게임이 멈추지 않도록 함 (최대 300번 탐색)
         search_limit = 300 
         
         while open_set and search_limit > 0:
@@ -881,25 +891,21 @@ class Enemy:
                 path.reverse()
                 return path
                 
-            # 상하좌우 및 대각선 탐색
             for dc, dr in [(0, -1), (0, 1), (-1, 0), (1, 0), (-1, -1), (1, -1), (-1, 1), (1, 1)]:
                 nc, nr = curr_c + dc, curr_r + dr
                 
                 if 0 <= nr < len(tile_map) and 0 <= nc < len(tile_map[0]):
-                    if tile_map[nr][nc] in [1, 2]: # 벽이나 저장 포인트는 못 감
+                    if tile_map[nr][nc] in [1, 2]: 
                         continue
                     
-                    # 대각선으로 이동할 때 좁은 모서리 벽을 뚫고 지나가는 것 방지
                     if dc != 0 and dr != 0:
                         if tile_map[curr_r][nc] in [1, 2] or tile_map[nr][curr_c] in [1, 2]:
                             continue
                             
-                    # 대각선은 가중치 1.414, 직선은 1
                     tentative_g = g_score[(curr_c, curr_r)] + (1.414 if dc != 0 and dr != 0 else 1)
                     if (nc, nr) not in g_score or tentative_g < g_score[(nc, nr)]:
                         came_from[(nc, nr)] = (curr_c, curr_r)
                         g_score[(nc, nr)] = tentative_g
-                        # 남은 거리에 대한 휴리스틱(맨해튼 거리) 추가
                         f_score = tentative_g + (abs(nc - tgt_c) + abs(nr - tgt_r))
                         heapq.heappush(open_set, (f_score, nc, nr))
         return []
@@ -910,7 +916,6 @@ class Enemy:
             
         self.path_calc_timer -= dt
         
-        # 0.2초마다 경로를 다시 탐색하여 최신 플레이어 위치 갱신
         if self.path_calc_timer <= 0:
             self.path_calc_timer = 0.2
             if tile_map:
@@ -920,15 +925,12 @@ class Enemy:
 
         direction = pygame.math.Vector2(0, 0)
         
-        # 찾아놓은 경로가 있다면 그 길을 따라 이동
         if self.path and len(self.path) > 0:
             next_node = self.path[0]
-            # 타일의 정중앙을 향해 이동
             target_x = next_node[0] * TILE_SIZE + TILE_SIZE / 2
             target_y = next_node[1] * TILE_SIZE + TILE_SIZE / 2
             node_target = pygame.math.Vector2(target_x, target_y)
             
-            # 다음 목표 타일에 충분히 가까워지면 다음 타일로 넘어감
             if self.pos.distance_to(node_target) < self.speed * dt * 2:
                 self.path.pop(0)
                 if not self.path: 
@@ -940,7 +942,6 @@ class Enemy:
             else:
                 direction = node_target - self.pos
         else:
-            # 경로를 못 찾았거나 경로가 끝나면 플레이어에게 직진
             direction = target_pos - self.pos
             
         if direction.length() > 0: 
@@ -949,7 +950,6 @@ class Enemy:
         move_x = direction.x * self.speed * dt
         move_y = direction.y * self.speed * dt
         
-        # 이동하려는 곳에 실제로 벽이 있는지 한 번 더 물리적 충돌 검사 (벽 파고듦 방지)
         can_move_x, can_move_y = True, True
         if tile_map:
             blocked_tiles = [1, 2]
@@ -997,7 +997,7 @@ def update_display(mode):
     current_width, current_height = screen.get_width(), screen.get_height()
 
 def main():
-    global current_width, current_height, screen, NAYE_HOME_MAP, CLASSROOM_MAP, TOILET_MAP, HEALTH_MAP, GYM_MAP
+    global current_width, current_height, screen, NAYE_HOME_MAP, CLASSROOM_MAP, TOILET_MAP, HEALTH_MAP, GYM_MAP, CAFETERIA_MAP
     
     load_config()
     update_display(config['display_mode'])
@@ -1158,11 +1158,13 @@ def main():
                                         popup_timer = 2.5       
                                         break
                                         
-                    elif current_map_idx in [0, 1, 2, 3]:
+                    # 👇 교실, 화장실, 보건실, 체육관, 급식실(4) 통합 상호작용
+                    elif current_map_idx in [0, 1, 2, 3, 4]:
                         if current_map_idx == 0: target_map = CLASSROOM_MAP
                         elif current_map_idx == 1: target_map = TOILET_MAP
                         elif current_map_idx == 2: target_map = HEALTH_MAP
-                        else: target_map = GYM_MAP
+                        elif current_map_idx == 3: target_map = GYM_MAP
+                        else: target_map = CAFETERIA_MAP
                         
                         for r in range(max(0, p_row-1), min(len(target_map), p_row+2)):
                             for c in range(max(0, p_col-1), min(len(target_map[0]), p_col+2)):
@@ -1382,6 +1384,8 @@ def main():
                                 current_tile_map = HEALTH_MAP
                             elif current_map_idx == 3:
                                 current_tile_map = GYM_MAP
+                            elif current_map_idx == 4:
+                                current_tile_map = CAFETERIA_MAP
 
                             if current_tile_map:
                                 hit_4_tiles = []
@@ -1430,6 +1434,8 @@ def main():
                 current_tile_map = HEALTH_MAP
             elif current_map_idx == 3:
                 current_tile_map = GYM_MAP
+            elif current_map_idx == 4:
+                current_tile_map = CAFETERIA_MAP
                 
             player.move(dt, room_w, room_h, world_mouse_x, world_mouse_y, current_map_idx, current_tile_map)
             current_play_time += dt
@@ -1614,6 +1620,7 @@ def main():
             pygame.draw.rect(view_surface, ROOM_COLOR, (-camera_x, -camera_y, room_w, room_h))
             
             if current_map_idx >= 0:
+                # 👇 교실(0), 화장실(1), 보건실(2), 체육관(3), 급식실(4) 맵 렌더링 통합 처리
                 if current_map_idx == 0 and 'class_bg' in IMAGES:
                     view_surface.blit(IMAGES['class_bg'], (-camera_x, -camera_y))
                 elif current_map_idx == 1 and 'toilet_bg' in IMAGES:
@@ -1622,12 +1629,15 @@ def main():
                     view_surface.blit(IMAGES['health_bg'], (-camera_x, -camera_y))
                 elif current_map_idx == 3 and 'gym_bg' in IMAGES:
                     view_surface.blit(IMAGES['gym_bg'], (-camera_x, -camera_y))
+                elif current_map_idx == 4 and 'cafeteria_bg' in IMAGES:
+                    view_surface.blit(IMAGES['cafeteria_bg'], (-camera_x, -camera_y))
                     
-                if current_map_idx in [0, 1, 2, 3]:
+                if current_map_idx in [0, 1, 2, 3, 4]:
                     if current_map_idx == 0: target_map = CLASSROOM_MAP
                     elif current_map_idx == 1: target_map = TOILET_MAP
                     elif current_map_idx == 2: target_map = HEALTH_MAP
-                    else: target_map = GYM_MAP
+                    elif current_map_idx == 3: target_map = GYM_MAP
+                    else: target_map = CAFETERIA_MAP
                     
                     start_col = max(0, int(camera_x // TILE_SIZE))
                     end_col = min(len(target_map[0]), int((camera_x + VIEW_W) // TILE_SIZE) + 1)
@@ -1646,7 +1656,7 @@ def main():
                                 pygame.draw.polygon(view_surface, (255, 255, 100), [p1, p2, p3])
                                 pygame.draw.polygon(view_surface, (150, 150, 50), [p1, p2, p3], 1)
                                 
-                if current_map_idx not in [0, 1, 2, 3]:
+                if current_map_idx not in [0, 1, 2, 3, 4]:
                     for i in range(cols + 1):
                         x_pos = i * TILE_SIZE - camera_x
                         pygame.draw.line(view_surface, GRID_COLOR, (x_pos, -camera_y), (x_pos, room_h - camera_y), 1)
@@ -1677,7 +1687,8 @@ def main():
                     elif dy == 1: doors_to_draw.append('BOTTOM')
                     elif dy == -1: doors_to_draw.append('TOP')
                     
-                if current_map_idx not in [0, 1, 2, 3]:
+                # 👇 기본 초록색 문 그리지 않기
+                if current_map_idx not in [0, 1, 2, 3, 4]:
                     for d in doors_to_draw:
                         if d == 'TOP':
                             pygame.draw.rect(view_surface, door_color, (room_w//2 - door_half_w - camera_x, -camera_y, door_w, 30))
@@ -1753,11 +1764,12 @@ def main():
                                 if pygame.math.Vector2(tc_x, tc_y).distance_to(player.pos) < 55:
                                     is_near_interact = True
                                     break
-                elif current_map_idx in [0, 1, 2, 3]: 
+                elif current_map_idx in [0, 1, 2, 3, 4]: 
                     if current_map_idx == 0: target_map = CLASSROOM_MAP
                     elif current_map_idx == 1: target_map = TOILET_MAP
                     elif current_map_idx == 2: target_map = HEALTH_MAP
-                    else: target_map = GYM_MAP
+                    elif current_map_idx == 3: target_map = GYM_MAP
+                    else: target_map = CAFETERIA_MAP
                     
                     for r in range(max(0, p_row-1), min(len(target_map), p_row+2)):
                         for c in range(max(0, p_col-1), min(len(target_map[0]), p_col+2)):
