@@ -67,19 +67,19 @@ heal_sound = None
 ending_sound = None
 gameover_sound = None
 try:
-    hit_sound = pygame.mixer.Sound("./code/week06/assets/sounds/피격음.mp3")
+    hit_sound = pygame.mixer.Sound("./assets/sounds/피격음.mp3")
     hit_sound.set_volume(0.1)
-    move_sound = pygame.mixer.Sound("./code/week06/assets/sounds/상태창음.mp3")
+    move_sound = pygame.mixer.Sound("./assets/sounds/상태창음.mp3")
     move_sound.set_volume(0.4)
-    attack_sound = pygame.mixer.Sound("./code/week06/assets/sounds/얀데레공격했을때.mp3")
+    attack_sound = pygame.mixer.Sound("./assets/sounds/얀데레공격했을때.mp3")
     attack_sound.set_volume(0.2)
-    love_sound = pygame.mixer.Sound("./code/week06/assets/sounds/얀데레사랑했을때.mp3")
+    love_sound = pygame.mixer.Sound("./assets/sounds/얀데레사랑했을때.mp3")
     love_sound.set_volume(0.2)
-    heal_sound = pygame.mixer.Sound("./code/week06/assets/sounds/회복음.mp3")
+    heal_sound = pygame.mixer.Sound("./assets/sounds/회복음.mp3")
     heal_sound.set_volume(0.1)
-    ending_sound = pygame.mixer.Sound("./code/week06/assets/sounds/엔딩음.mp3")
+    ending_sound = pygame.mixer.Sound("./assets/sounds/엔딩음.mp3")
     ending_sound.set_volume(0.05)
-    gameover_sound = pygame.mixer.Sound("./code/week06/assets/sounds/게임오버음.mp3")
+    gameover_sound = pygame.mixer.Sound("./assets/sounds/게임오버음.mp3")
     gameover_sound.set_volume(0.1)
 except pygame.error as e:
     print(f"사운드 파일을 불러올 수 없습니다: {e}")
@@ -307,7 +307,7 @@ def create_multicolor_surface(lines, font_obj):
 def story_intro_screen():
     # 스토리음악 재생
     try:
-        pygame.mixer.music.load("./code/week06/assets/sounds/스토리음.mp3")
+        pygame.mixer.music.load("./assets/sounds/스토리음.mp3")
         pygame.mixer.music.set_volume(0.03)   
         pygame.mixer.music.play(-1)
     except:
@@ -395,7 +395,7 @@ def story_intro_screen():
     # 죽어 씬 배경음악 재생
     pygame.mixer.music.stop()
     try:
-        pygame.mixer.music.load("./code/week06/assets/sounds/죽어음.wav")
+        pygame.mixer.music.load("./assets/sounds/죽어음.wav")
         pygame.mixer.music.set_volume(0.03)   
         pygame.mixer.music.play(-1)
     except:
@@ -514,7 +514,7 @@ def main():
 
     # 게임 시작 시 브금 재생
     try:
-        pygame.mixer.music.load("./code/week06/assets/sounds/배경음.mp3")
+        pygame.mixer.music.load("./assets/sounds/배경음.mp3")
         pygame.mixer.music.set_volume(0.08)
         pygame.mixer.music.play(-1) 
     except:
